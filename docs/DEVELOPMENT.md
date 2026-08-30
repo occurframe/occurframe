@@ -34,4 +34,29 @@ failure among the reproducible builds.
 
 Generated `dist/` content is disposable and must not become normative source. Occurrence arrays are ordered observations: never sort or deduplicate them.
 
-Fast correctness CI validates authority, fake-runner protocol containment, and deterministic serialization on desktop platforms. The manual/scheduled adapter-certification workflow restores pinned historical builds and runs only the representative migration suite. That is still not the future full 184-vector differential certification, and no smoke artifact is an official engine matrix.
+Fast correctness CI validates authority, fake-runner protocol containment, and
+deterministic serialization on desktop platforms. The manual/scheduled adapter
+certification workflow restores pinned historical builds and runs only the
+representative migration suite; its smoke artifact is not the full evidence
+set. The separate Full Differential Certification workflow runs the complete
+184-vector population twice in the canonical environment and uploads the
+candidate RC2 evidence bundle. Neither workflow changes corpus authority.
+
+Full RC2 certification is a separate, long-running developer workflow. Build
+the canonical image once, then execute with networking disabled:
+
+```text
+pwsh -File certification/docker/certify.ps1 -Action build
+pwsh -File certification/docker/certify.ps1 -Action run -Script certification/docker/tasks/full-certification.sh
+```
+
+The task validates all 184 vectors, runs every reproducible build, emits one
+observation per build/vector pair, scores with `occurframe-conformance`, runs a
+second certification, and verifies byte equality of all seven semantic
+artifacts. For direct internal use, the corresponding commands are
+`differential-certify`, `differential-verify`, and `certification-verify`.
+
+Do not run a candidate official certification on a developer interpreter. The
+runtime version is part of runner identity and is enforced during `hello`.
+Dependency restoration happens during image construction; the actual
+certification container runs with `--network none`.
