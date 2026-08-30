@@ -2,17 +2,28 @@
 
 ## Version identities
 
-Three versions move independently and are never conflated:
+Four versions move independently and are never conflated:
 
 ```text
-Occurframe tooling: 0.1.0-rc1
+Occurframe tooling: 0.1.0-rc2
+Specification:      1.0.0-rc1
 Corpus:             1.0.0-rc2
 Runner protocol:    2.0
 ```
 
-The certification evidence profile is `rc2.1`. `0.1.0-rc1` is the first public
-tooling release candidate; it does not relabel the corpus as stable `1.0.0` and
-does not imply that all four reserved commands are implemented.
+The certification evidence profile is `rc2.1`.
+
+The **behavioural specification** versions separately from everything else
+because it is the semantics an implementation is measured against, not the
+artefact that measures. It is authored in `occurframe/corpus` and declared in
+`spec/specification.json`; the tooling pins the same value once in
+`release/evidence-lock.json`, and packaging fails if the two disagree.
+Specification `1.0.0-rc1` is the version that carries ERRATA-001, under which
+Occurframe v1 ships one semantic command.
+
+`0.1.0-rc2` does not relabel the corpus as stable `1.0.0`, does not claim a
+four-command CLI, and does not imply that an Occurframe recurrence engine
+exists.
 
 ## What a release contains
 
@@ -43,6 +54,8 @@ a redistributed copy of it.
 - every target triple, and every binary with its alias, target and SHA-256;
 - corpus version, repository, pinned corpus SHA, canonical digest, release
   digest and vector count;
+- the specification version, the errata that fix its command doctrine, and the
+  complete set of semantic commands the release ships;
 - runner protocol version;
 - certification artifact name, profile version, the tooling SHA that produced the
   evidence, the digest of the certification manifest itself, the certified

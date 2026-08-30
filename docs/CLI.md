@@ -2,7 +2,7 @@
 
 ## `test`
 
-Occurframe `0.1.0-rc1` implements one public operation:
+Occurframe `0.1.0-rc2` implements one public operation:
 
 ```text
 occurframe test --engine <configured-build-id>
@@ -69,14 +69,18 @@ redirected stdout gets one deterministic JSON object.
 ```text
 0  every scorable selected vector conforms; unsupported/open cells stay explicit
 1  semantic non-conformance, engine error, or engine timeout
-3  usage error, including missing/unknown engine or family
+3  usage error, including an unknown command, option, engine ID or family
 4  corpus, registry, runtime, identity, provenance, or runner infrastructure failure
 ```
 
-Exit `4` takes precedence over `1` when both are present: a run whose evidence is
-untrustworthy is not a statement about the engine. Codes `2` (schedule rejection)
-and `5` (truncation) remain reserved for the frozen future surface and are never
-manufactured by `test`.
+These four are the active v1 contract and are never renumbered. Exit `4` takes
+precedence over `1` when both are present: a run whose evidence is untrustworthy
+is not a statement about the engine.
+
+Codes `2` (schedule rejection) and `5` (truncation) stay frozen in the
+specification and inactive here. Both presuppose evaluating a caller's own
+schedule, which only the deferred engine-gated commands would do, so `test` can
+never produce them. They are reserved rather than reused.
 
 ## Discovery
 
@@ -147,9 +151,31 @@ base with `OCCURFRAME_RUNNER_ROOT`, and see
 [Writing a runner](WRITING-A-RUNNER.md). A complete worked example ships in
 `examples/minimal-runner/`.
 
-## Reserved commands
+## Deferred commands — engine-gated, not part of v1
 
-`explain`, `classify` and `occurrences` are recognized only as reserved,
-not-yet-available names and return a usage error. They are not redirected, faked
-or evaluator-backed. This prerelease does not claim the full frozen v1 command
-surface; see [Known contradictions](KNOWN-CONTRADICTIONS.md).
+Occurframe v1 ships one semantic command. `explain`, `classify` and
+`occurrences` are **not** part of the command tree: they are not recognized,
+not reserved-with-a-message, and not present in `--help`. Typing one produces the
+same ordinary usage error as any other unknown word, because a command that
+cannot exist should not be advertised as if it merely had not arrived yet.
+
+Research II froze all four names. Three of them require Occurframe to compute
+occurrences rather than observe them — `occurrences` emits them outright,
+`classify` needs a parser and evaluator per cron dialect, and `explain` must
+decide what a schedule denotes and which policy axes are reachable — and the
+ORACLE ONLY verdict does not authorise a production recurrence engine in any
+language. The verdict governs the interface text derived from it. The full
+reasoning is
+[ERRATA-001](https://github.com/occurframe/corpus/blob/dev/spec/ERRATA.md) in the
+corpus; their frozen semantics are preserved unchanged in the specification's
+§6.7 so the engine gate can be walked without reopening research.
+
+They were not reimplemented as corpus or report inspection commands to keep their
+names, and nothing delegates to `cron_ref.py`, to one incumbent engine, or to an
+arbitrary adapter to imitate them.
+
+The conceptual scheduling API in the specification is likewise **specification
+only**: it describes what a conforming implementation exposes, and Occurframe v1
+does not ship it as a library. Three things are kept distinct throughout this
+documentation — a *specified operation*, the *implemented oracle tooling*, and a
+*future engine implementation*.

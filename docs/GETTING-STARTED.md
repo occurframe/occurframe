@@ -16,10 +16,10 @@ file inside the archive is covered by its own `SHA256SUMS`.
 
 ```sh
 # The digest published beside the archive.
-sha256sum -c occurframe-0.1.0-rc1.tar.gz.sha256
+sha256sum -c occurframe-0.1.0-rc2.tar.gz.sha256
 
-tar -xzf occurframe-0.1.0-rc1.tar.gz
-cd occurframe-0.1.0-rc1
+tar -xzf occurframe-0.1.0-rc2.tar.gz
+cd occurframe-0.1.0-rc2
 
 # Every packaged file, at the digest the release recorded for it.
 sha256sum -c SHA256SUMS
@@ -28,8 +28,8 @@ sha256sum -c SHA256SUMS
 On macOS use `shasum -a 256 -c`. On Windows PowerShell:
 
 ```powershell
-Get-FileHash occurframe-0.1.0-rc1.tar.gz -Algorithm SHA256
-tar -xzf occurframe-0.1.0-rc1.tar.gz
+Get-FileHash occurframe-0.1.0-rc2.tar.gz -Algorithm SHA256
+tar -xzf occurframe-0.1.0-rc2.tar.gz
 ```
 
 `release-manifest.json` records what this artifact is: tooling version, the exact
@@ -72,12 +72,17 @@ cat VERSION
 ```
 
 ```text
-Occurframe tooling: 0.1.0-rc1
+Occurframe tooling: 0.1.0-rc2
+Specification:      1.0.0-rc1
 Corpus:             1.0.0-rc2
 Runner protocol:    2.0
 Certification:      rc2.1
 Commit:             <exact released commit>
 ```
+
+`--version` reports the same identities, because a conformance result cannot be
+reproduced without knowing the specification it was scored against, the corpus it
+came from and the protocol it was gathered over. All four version independently.
 
 `corpus/manifest.json` records the corpus version, the canonical digest of the
 authored vectors, and a per-file digest:
@@ -151,6 +156,12 @@ Exit codes are the machine-readable summary:
 Exit `4` takes precedence over `1`. That distinction matters: `4` means the run
 did not produce trustworthy evidence, so it is not a statement about your engine
 at all.
+
+`test` is the whole semantic surface of Occurframe v1. `explain`, `classify` and
+`occurrences` appear in the specification but are deferred behind the engine
+gate — each needs Occurframe to compute occurrences, which it does not do — so
+typing one gives an ordinary unknown-command usage error. See
+[CLI](CLI.md#deferred-commands--engine-gated-not-part-of-v1).
 
 ## 6. Consume JSON or JUnit in CI
 

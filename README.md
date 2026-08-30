@@ -25,7 +25,7 @@ archive to a JUnit report in CI.
 
 A **vector** is one language-neutral recurring-time behaviour case: an input, the
 semantic context it must be read in, a classification, the normative evidence
-behind it, and an authored expectation. Occurframe `0.1.0-rc1` ships corpus
+behind it, and an authored expectation. Occurframe `0.1.0-rc2` ships corpus
 `1.0.0-rc2` — 184 vectors across cron anchoring, day fields, day-of-week
 numbering, DST, extensions, field counts, invalid input, names and steps, plus
 RRULE core/BY-rules/sets/DST and timezone-database provenance.
@@ -78,14 +78,22 @@ reading a matrix without over-claiming.
 
 ## What this prerelease is not
 
-`0.1.0-rc1` is a **prerelease**. It is not Occurframe v1.0, and the corpus is
+`0.1.0-rc2` is a **prerelease**. It is not Occurframe v1.0, and the corpus is
 `1.0.0-rc2`, not stable `1.0.0`.
 
-Only `test` is implemented. `explain`, `classify` and `occurrences` are reserved
-names that return a usage error: their frozen meanings appear to require
-evaluator behaviour, which conflicts with Occurframe's no-engine boundary. They
-are not redirected, faked or partially implemented. See
-[Known contradictions](docs/KNOWN-CONTRADICTIONS.md).
+**Occurframe v1 ships one semantic command: `test`.** That is the whole surface,
+and it is deliberate. Research II originally froze four command names, but three
+of them — `explain`, `classify`, `occurrences` — cannot be built without
+Occurframe computing occurrences itself, which the ORACLE ONLY verdict does not
+authorise. The verdict governs, so those three are **deferred behind the engine
+gate**: not implemented, not advertised, and not redefined into something else to
+keep their names. The reasoning is recorded as
+[ERRATA-001](https://github.com/occurframe/corpus/blob/dev/spec/ERRATA.md) in the
+corpus, and summarised in [Known contradictions](docs/KNOWN-CONTRADICTIONS.md).
+
+There is no Occurframe recurrence engine, and the conceptual scheduling API in
+the specification is exactly that — a specification of what a conforming
+implementation exposes, not a library this release ships.
 
 ## Documentation
 
@@ -96,7 +104,8 @@ are not redirected, faked or partially implemented. See
 | [Writing a runner](docs/WRITING-A-RUNNER.md) | Integrating an engine over protocol `2.0` |
 | [Interpreting results](docs/INTERPRETING-RESULTS.md) | What each verdict does and does not mean |
 | [Releases](docs/RELEASES.md) | Release contents, provenance, reproducibility |
-| [Known contradictions](docs/KNOWN-CONTRADICTIONS.md) | Unresolved product tensions, stated plainly |
+| [Known contradictions](docs/KNOWN-CONTRADICTIONS.md) | Product tensions and how they were settled |
+| [V1 readiness](docs/V1-READINESS.md) | What stands between this and an owner-reviewed prerelease |
 | [Architecture](docs/ARCHITECTURE.md) · [Runner architecture](docs/RUNNER-ARCHITECTURE.md) · [Differential certification](docs/DIFFERENTIAL-CERTIFICATION.md) · [Development](docs/DEVELOPMENT.md) | Internals and contribution |
 
 `examples/minimal-runner/` is a complete, runnable protocol example — a protocol

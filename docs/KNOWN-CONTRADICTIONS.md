@@ -1,25 +1,36 @@
 # Known contradictions
 
-Unresolved tensions are recorded here rather than smoothed over. Each one is
-still open.
+Tensions are recorded here rather than smoothed over. Resolved entries keep their
+place, pointing at the formal decision, so that a reader who remembers the
+contradiction can find out how it was settled.
 
-## Reserved CLI names versus the no-engine gate
+## Reserved CLI names versus the no-engine gate — RESOLVED
 
-Research II freezes `test`, `explain`, `classify` and `occurrences` as the only
-public command names. It also closes the production recurrence-engine gate. The
-frozen meanings of `explain`, `classify` and especially `occurrences` appear to
-require evaluator behaviour, so implementing them would conflict with
-**GO — ORACLE ONLY**.
+**Resolved by ERRATA-001**, recorded in the corpus at
+[`spec/ERRATA.md`](https://github.com/occurframe/corpus/blob/dev/spec/ERRATA.md)
+and carried by specification version `1.0.0-rc1`.
 
-`0.1.0-rc1` implements only `test`, which observes external engines through
-protocol `2.0` and scores against authored corpus expectations. The remaining
-names are reserved and return a not-yet-available usage error. No substitute
-meanings, redirects or hidden evaluators are supplied.
+Research II froze `test`, `explain`, `classify` and `occurrences` as the public
+command names while its own decision gate explicitly did not authorise a
+production recurrence engine in any language. Three of the four could not be
+implemented without one: `occurrences` emits occurrences outright, `classify`
+needs a parser and evaluator for each cron dialect, and `explain` must decide
+what a schedule denotes and which policy axes are reachable. `test` needs none of
+that — it measures an external engine's answers against authored expectations.
 
-This contradiction remains unresolved and must be addressed through explicit
-product doctrine before any reserved command can be implemented. A user reading
-the help text will see four names and find one that works; that is the honest
-presentation of the current state, not a plan.
+The precedence rule applied is that a final verdict and its explicit prohibition
+govern lower-level interface text that cannot be implemented without violating
+it. Occurframe v1 therefore ships one semantic command, `test`, and the other
+three are deferred behind the unchanged engine gate: not implemented, not
+advertised in help, not redefined into corpus or report commands to preserve
+their names, and not backed by `cron_ref.py`, an incumbent engine, an arbitrary
+adapter or a partial evaluator. Their frozen semantics are preserved verbatim in
+the specification so the gate can be walked without reopening research.
+
+What remains open is not a contradiction but a condition: the engine gate itself.
+It is unchanged and closed, and reads *"a named maintainer of a named project
+commits, in writing and in public, to adopt an Occurframe engine at a specified
+integration seam."*
 
 ## Historical Ruby build provenance
 

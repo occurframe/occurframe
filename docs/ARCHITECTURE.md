@@ -17,10 +17,12 @@ The `occurframe/corpus` repository owns authored, language-neutral authority: sp
 
 Cron remains a predicate-shaped semantic family. RRULE remains an anchor/generator-shaped semantic family. The workspace does not unify them into a recurrence AST and does not parse, expand, resolve, or execute recurrence rules. The Research II engine reopening gate remains closed.
 
-The implemented `test` command invokes only external protocol-v2 runners. The reserved public commands `explain`, `classify`, and especially
-`occurrences` still appear to require evaluator behavior that conflicts with
-the ORACLE ONLY verdict. This CLI-versus-engine contradiction is recorded and
-unresolved; certification tooling does not silently solve it.
+The implemented `test` command invokes only external protocol-v2 runners. It is
+the entire v1 semantic surface. `explain`, `classify` and `occurrences` each
+require an Occurframe-owned evaluator, so under ERRATA-001 they are deferred
+behind the engine gate rather than implemented, delegated or renamed. The
+CLI-versus-engine contradiction is resolved in favour of the verdict; nothing in
+the certification tooling supplies a hidden evaluator.
 
 ## Runner boundary
 

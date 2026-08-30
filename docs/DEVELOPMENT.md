@@ -83,7 +83,7 @@ cargo run -p xtask -- verify-evidence-archive --root . --lock release/evidence-l
 Release-candidate packaging is deterministic and refuses evidence, corpus, or binaries that differ from `release/evidence-lock.json`:
 
 ```text
-cargo run -p xtask -- release-package --root . --corpus ../corpus --certification dist/certification/rc2 --binaries dist/platform-binaries --lock release/evidence-lock.json --output dist/release/occurframe-0.1.0-rc1
+cargo run -p xtask -- release-package --root . --corpus ../corpus --certification dist/certification/rc2 --binaries dist/platform-binaries --lock release/evidence-lock.json --output dist/release/occurframe-0.1.0-rc2
 ```
 
 The output path must not already exist. Full platform assembly is performed by the manual release-candidate CI workflow; it uploads artifacts but never publishes GitHub Releases or crates.
@@ -100,7 +100,7 @@ Packaging refuses to write `SHA256SUMS` until an audit proves the bundle carries
 no absolute developer or CI path, and the same audit is available directly:
 
 ```text
-cargo run -p xtask -- audit-paths --root dist/release/occurframe-0.1.0-rc1
+cargo run -p xtask -- audit-paths --root dist/release/occurframe-0.1.0-rc2
 cargo run -p xtask -- audit-paths --root dist/platform-binaries --forbid /srv/build
 ```
 
@@ -115,7 +115,7 @@ The digest of a transport archive cannot live inside the archive it describes, s
 it is recorded beside the release:
 
 ```text
-cargo run -p xtask -- release-attest --bundle dist/release/occurframe-0.1.0-rc1 --archive dist/release/occurframe-0.1.0-rc1.tar.gz --output dist/release/release-attestation.json
+cargo run -p xtask -- release-attest --bundle dist/release/occurframe-0.1.0-rc2 --archive dist/release/occurframe-0.1.0-rc2.tar.gz --output dist/release/release-attestation.json
 ```
 
 Two consumer-facing suites complement the Rust tests. The fast one runs in
@@ -125,7 +125,7 @@ machine:
 
 ```text
 python3 tests/example-runner/smoke.py --occurframe target/debug/occurframe --oframe target/debug/oframe --corpus packed-corpus
-python3 tests/clean-room/verify_release.py --bundle dist/release/occurframe-0.1.0-rc1.tar.gz --target x86_64-unknown-linux-gnu
+python3 tests/clean-room/verify_release.py --bundle dist/release/occurframe-0.1.0-rc2.tar.gz --target x86_64-unknown-linux-gnu
 ```
 
 Source-package readiness: `occurframe-wire` and `occurframe-conformance` are

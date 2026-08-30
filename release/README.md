@@ -1,4 +1,4 @@
-# Occurframe 0.1.0-rc1
+# Occurframe 0.1.0-rc2
 
 **Occurframe is an executable conformance oracle for recurring-time semantics.
 It is not a scheduling engine.**
@@ -6,10 +6,14 @@ It is not a scheduling engine.**
 This is a **prerelease**. It is not Occurframe v1.0.
 
 ```text
-Occurframe tooling: 0.1.0-rc1
+Occurframe tooling: 0.1.0-rc2
+Specification:      1.0.0-rc1
 Corpus:             1.0.0-rc2
 Runner protocol:    2.0
 ```
+
+Occurframe v1 ships one semantic command, `test`. All four identities above
+version independently, and every result records them.
 
 ## Start here
 
@@ -64,10 +68,14 @@ engine ranking is published or derivable.
 
 ## Scope of this prerelease
 
-Only `test` is implemented. `explain`, `classify` and `occurrences` remain
-reserved and return a usage error, because their frozen meanings imply evaluator
-behaviour that conflicts with the no-engine boundary. See
-`docs/KNOWN-CONTRADICTIONS.md`.
+Occurframe v1 ships one semantic command: `test`. `explain`, `classify` and
+`occurrences` are deferred behind the engine gate, because each requires
+Occurframe to compute occurrences rather than observe them, which the ORACLE ONLY
+verdict does not authorise. They are not implemented, not advertised and not
+redefined. See `docs/KNOWN-CONTRADICTIONS.md`; the formal record is ERRATA-001 in
+the corpus.
+
+No Occurframe recurrence engine exists in this release.
 
 Occurframe's own code is `Apache-2.0 OR MIT`; the corpus's authored semantic data
 is `CC0-1.0`. See `LICENSES.md`.
