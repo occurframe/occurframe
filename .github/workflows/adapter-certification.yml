@@ -61,10 +61,25 @@ jobs:
           mkdir -p bin
           go build -trimpath -o bin/occurframe-go-runner .
 
-      - name: Install pinned PHP runtime
-        uses: shivammathur/setup-php@v2
-        with:
-          php-version: 8.4.21
+      - name: Build exact pinned PHP runtime
+        shell: bash
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            autoconf bison build-essential libcurl4-openssl-dev libicu-dev \
+            libonig-dev libssl-dev libxml2-dev pkg-config re2c zlib1g-dev
+          curl -fsSLO https://www.php.net/distributions/php-8.4.21.tar.xz
+          echo "7cf5d8ab12c3b2016875bcfaec71bef1ef0b07bed6148f2c447577074431f984  php-8.4.21.tar.xz" | sha256sum --check
+          tar -xJf php-8.4.21.tar.xz
+          cd php-8.4.21
+          ./configure --prefix="$RUNNER_TEMP/php-8.4.21" \
+            --disable-cgi --disable-phpdbg --enable-mbstring --enable-calendar \
+            --enable-intl --with-openssl --with-zlib --with-curl \
+            --enable-bcmath --with-system-tzdata
+          make -j2
+          make install
+          "$RUNNER_TEMP/php-8.4.21/bin/php" --version | head -1 | grep -F "PHP 8.4.21"
+          echo "$RUNNER_TEMP/php-8.4.21/bin" >> "$GITHUB_PATH"
 
       - name: Restore pinned PHP engine sources
         shell: bash
