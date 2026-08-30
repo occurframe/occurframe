@@ -20,6 +20,10 @@ use occurframe_runner::{
 };
 use occurframe_wire::{EngineOutcome, ExecutionStatus, Vector};
 
+mod audit;
+mod deps;
+mod release;
+
 fn main() -> ExitCode {
     match run() {
         Ok(()) => ExitCode::SUCCESS,
@@ -192,15 +196,67 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
             print_json(&serde_json::json!({"checksums_valid": true}))?;
         }
         "release-package" => {
-            let report = package_release_candidate(
-                &options.required("root")?,
-                &options.required("corpus")?,
-                &options.required("certification")?,
-                &options.required("binaries")?,
-                &options.required("lock")?,
-                &options.required("output")?,
-            )?;
+            let report = package_release_candidate(&ReleaseInputs {
+                repository_root: options.required("root")?,
+                corpus_root: options.required("corpus")?,
+                certification_root: options.required("certification")?,
+                binaries_root: options.required("binaries")?,
+                lock_path: options.required("lock")?,
+                output: options.required("output")?,
+                commit: options.optional_string("commit"),
+            })?;
             print_json(&report)?;
+        }
+        "dependency-inventory" => {
+            let manifest = options.required("manifest")?;
+            let (inventory, notices) = deps::dependency_inventory(
+                &manifest,
+                &deps::lock_beside(&manifest),
+                &options
+                    .optional_string("package")
+                    .unwrap_or_else(|| "occurframe-cli".to_owned()),
+            )?;
+            fs::write(
+                options.required("output")?,
+                canonical_pretty_json(&inventory)?,
+            )?;
+            if let Some(path) = options
+                .values
+                .get("notices")
+                .and_then(|values| values.first())
+            {
+                fs::write(path, deps::render_notices(&inventory, &notices))?;
+            }
+            print_json(&serde_json::json!({
+                "first_party": inventory.first_party.len(),
+                "third_party": inventory.third_party_count
+            }))?;
+        }
+        "audit-paths" => {
+            let report =
+                audit::audit_paths(&options.required("root")?, &options.all_strings("forbid"))?;
+            print_json(&report)?;
+            if !report.leaks.is_empty() {
+                return Err(format!(
+                    "{} absolute developer/CI path leak(s) found in the packaged artifact",
+                    report.leaks.len()
+                )
+                .into());
+            }
+        }
+        "release-attest" => {
+            let attestation = release_attestation(
+                &options.required("bundle")?,
+                options
+                    .values
+                    .get("archive")
+                    .and_then(|values| values.first()),
+            )?;
+            fs::write(
+                options.required("output")?,
+                canonical_pretty_json(&attestation)?,
+            )?;
+            print_json(&attestation)?;
         }
         _ => return Err(format!("unknown command: {command}").into()),
     }
@@ -257,15 +313,130 @@ struct ReleasePackageReport {
     certification_artifact_name: String,
 }
 
+/// Everything `release-package` needs. Grouped so that adding a release input
+/// does not silently reorder a long positional argument list.
+struct ReleaseInputs {
+    repository_root: PathBuf,
+    corpus_root: PathBuf,
+    certification_root: PathBuf,
+    binaries_root: PathBuf,
+    lock_path: PathBuf,
+    output: PathBuf,
+    /// The exact commit being released. CI passes the SHA it checked out;
+    /// otherwise the working checkout is asked.
+    commit: Option<String>,
+}
+
+/// Copy a directory tree, deterministically and without following symlinks.
+///
+/// `filter` selects which files are published, so that developer-only material
+/// in a source directory never reaches the distribution by accident.
+fn copy_tree(
+    source: &Path,
+    destination: &Path,
+    filter: &dyn Fn(&Path) -> bool,
+) -> Result<usize, Box<dyn std::error::Error>> {
+    let mut entries: Vec<_> = walkdir::WalkDir::new(source)
+        .follow_links(false)
+        .into_iter()
+        .collect::<Result<Vec<_>, _>>()?
+        .into_iter()
+        .filter(|entry| entry.file_type().is_file())
+        .map(walkdir::DirEntry::into_path)
+        .filter(|path| filter(path))
+        .collect();
+    entries.sort();
+    for path in &entries {
+        let relative = path.strip_prefix(source)?;
+        let target = destination.join(relative);
+        if let Some(parent) = target.parent() {
+            fs::create_dir_all(parent)?;
+        }
+        fs::copy(path, &target)?;
+    }
+    Ok(entries.len())
+}
+
+/// Out-of-bundle attestation.
+///
+/// The digest of an archive cannot live inside the archive it describes, so the
+/// bundle digest and the transport-archive digest are recorded beside the
+/// release rather than within it.
+/// Human-readable licensing map for the bundle root.
+fn render_licenses(licensing: &release::Licensing, third_party_count: usize) -> String {
+    format!(
+        "# Licensing\n\nThis release redistributes material under more than one license.\n\n| Part of the release | License |\n| --- | --- |\n| Occurframe Rust code (`bin/`) | {} |\n| Reference and tooling code | {} |\n| Corpus semantic data (`corpus/`) | {} |\n| Third-party crates linked into the binaries ({third_party_count}) | {} |\n\nFull texts of the Occurframe licenses are in `LICENSE-APACHE` and `LICENSE-MIT`\nat the root of this bundle. `Apache-2.0 OR MIT` is a choice: a consumer may take\neither license, so anyone requiring Apache-2.0 alone may simply use Apache-2.0.\n\nThe corpus is authored in the separate `occurframe/corpus` repository and its\nvectors, registries and schemas are dedicated to the public domain under\nCC0-1.0. Generated observations, matrices and reports are derived artifacts, not\nnormative source.\n\n`THIRD-PARTY-NOTICES.md` reproduces the license and notice texts published with\neach linked crate, and `DEPENDENCIES.json` records name, version, source,\nregistry checksum and declared license for each. Where a crate publishes no\nlicense expression, that fact is recorded rather than a license being assumed.\n\nNo third-party recurrence engine or engine runtime is redistributed here. The\nadapter registry in `adapters/` records engine identity and provenance only.\n",
+        licensing.occurframe_code,
+        licensing.reference_and_tooling_code,
+        licensing.corpus_semantic_data,
+        licensing.third_party
+    )
+}
+
+#[derive(Debug, serde::Serialize)]
+struct ReleaseAttestation {
+    schema_version: String,
+    artifact_kind: String,
+    tool_version: String,
+    /// SHA-256 of the bundle's `SHA256SUMS`, which in turn covers every file.
+    bundle_checksums_digest: String,
+    bundle_files: usize,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    archive_file: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    archive_sha256: Option<String>,
+}
+
+fn release_attestation(
+    bundle: &Path,
+    archive: Option<&PathBuf>,
+) -> Result<ReleaseAttestation, Box<dyn std::error::Error>> {
+    let checksums = fs::read(bundle.join("SHA256SUMS"))?;
+    // One line per packaged file; the manifest is newline-terminated.
+    let bundle_files = checksums
+        .split(|byte| *byte == b'\n')
+        .filter(|line| !line.is_empty())
+        .count();
+    let (archive_file, archive_sha256) = match archive {
+        Some(path) => (
+            path.file_name()
+                .map(|name| name.to_string_lossy().into_owned()),
+            Some(sha256_hex(&fs::read(path)?)),
+        ),
+        None => (None, None),
+    };
+    Ok(ReleaseAttestation {
+        schema_version: "1.0.0".into(),
+        artifact_kind: "occurframe_release_attestation".into(),
+        tool_version: env!("CARGO_PKG_VERSION").into(),
+        bundle_checksums_digest: sha256_hex(&checksums),
+        bundle_files,
+        archive_file,
+        archive_sha256,
+    })
+}
+
 #[allow(clippy::too_many_lines)]
 fn package_release_candidate(
-    repository_root: &Path,
-    corpus_root: &Path,
-    certification_root: &Path,
-    binaries_root: &Path,
-    lock_path: &Path,
-    output: &Path,
+    inputs: &ReleaseInputs,
 ) -> Result<ReleasePackageReport, Box<dyn std::error::Error>> {
+    let ReleaseInputs {
+        repository_root,
+        corpus_root,
+        certification_root,
+        binaries_root,
+        lock_path,
+        output,
+        commit,
+    } = inputs;
+    let (repository_root, corpus_root, certification_root, binaries_root, lock_path, output) = (
+        repository_root.as_path(),
+        corpus_root.as_path(),
+        certification_root.as_path(),
+        binaries_root.as_path(),
+        lock_path.as_path(),
+        output.as_path(),
+    );
     if output.exists() {
         return Err(format!(
             "release output already exists: {}; use a new empty path",
@@ -289,13 +460,24 @@ fn package_release_candidate(
     fs::create_dir_all(output.join("reports"))?;
     fs::create_dir_all(output.join("certification"))?;
     fs::create_dir_all(output.join("adapters"))?;
+    let mut binaries = Vec::new();
+    let mut target_triples = BTreeSet::new();
     for binary in &lock.platform_binaries {
         let source = binaries_root.join(binary);
         if !source.is_file() {
             return Err(format!("missing required platform binary {}", source.display()).into());
         }
         fs::copy(&source, output.join("bin").join(binary))?;
+        let (alias, target) = release::split_binary_name(binary)?;
+        target_triples.insert(target.clone());
+        binaries.push(release::BinaryEntry {
+            path: format!("bin/{binary}"),
+            alias,
+            target,
+            sha256: sha256_hex(&fs::read(&source)?),
+        });
     }
+    binaries.sort_by(|left, right| left.path.cmp(&right.path));
 
     let corpus_report = pack_release(corpus_root, &output.join("corpus"))?;
     if corpus_report.corpus_version != lock.corpus.version
@@ -332,6 +514,47 @@ fn package_release_candidate(
         repository_root.join("release/README.md"),
         output.join("README.md"),
     )?;
+
+    // Public documentation travels with the release: a consumer who downloaded
+    // an archive has no checkout to read docs from.
+    let documentation = copy_tree(
+        &repository_root.join("docs"),
+        &output.join("docs"),
+        &|path| path.extension().is_some_and(|extension| extension == "md"),
+    )?;
+    if documentation == 0 {
+        return Err("no public documentation was available for release packaging".into());
+    }
+    // The protocol example must be runnable straight from an extracted release,
+    // because that is exactly the clean-room path a new integrator takes.
+    let examples = copy_tree(
+        &repository_root.join("examples"),
+        &output.join("examples"),
+        &|path| {
+            !path
+                .components()
+                .any(|component| component.as_os_str() == "__pycache__")
+        },
+    )?;
+    if examples == 0 {
+        return Err("no protocol example was available for release packaging".into());
+    }
+    // The release notes belong with the artifact, not only on a release page: a
+    // consumer working offline should be able to read what they downloaded.
+    let notes = repository_root
+        .join("release-notes")
+        .join(format!("{}.md", lock.tool_version));
+    if !notes.is_file() {
+        return Err(format!("release notes are missing: {}", notes.display()).into());
+    }
+    fs::create_dir_all(output.join("release-notes"))?;
+    fs::copy(
+        &notes,
+        output
+            .join("release-notes")
+            .join(format!("{}.md", lock.tool_version)),
+    )?;
+
     let mut license_count = 0_usize;
     for entry in fs::read_dir(repository_root)? {
         let entry = entry?;
@@ -345,21 +568,119 @@ fn package_release_candidate(
     if license_count == 0 {
         return Err("no LICENSE file was available for release packaging".into());
     }
-    let release_identity = serde_json::json!({
-        "artifact_kind": "occurframe_release_candidate",
-        "certification_artifact_name": lock.certification.artifact_name,
-        "certification_semantic_bundle_digest": lock.certification.semantic_bundle_digest,
-        "corpus_canonical_digest": lock.corpus.canonical_digest,
-        "corpus_sha": lock.corpus.sha,
-        "corpus_version": lock.corpus.version,
-        "runner_protocol_version": occurframe_wire::RUNNER_PROTOCOL_VERSION,
-        "schema_version": "1.0.0",
-        "tool_version": lock.tool_version
-    });
+    // A corpus checkout that carries its own license file publishes it with the
+    // corpus data it covers.
+    for name in ["LICENSE", "LICENSE-CC0", "LICENSE.txt", "COPYING"] {
+        let candidate = corpus_root.join(name);
+        if candidate.is_file() {
+            fs::copy(&candidate, output.join("corpus").join(name))?;
+        }
+    }
+
+    // Dependency inventory and third-party notices for everything the binaries
+    // statically link.
+    let workspace_manifest = repository_root.join("Cargo.toml");
+    let (inventory, notices) = deps::dependency_inventory(
+        &workspace_manifest,
+        &deps::lock_beside(&workspace_manifest),
+        "occurframe-cli",
+    )?;
+    let inventory_bytes = canonical_pretty_json(&inventory)?;
+    fs::write(output.join("DEPENDENCIES.json"), &inventory_bytes)?;
+    let notice_bytes = deps::render_notices(&inventory, &notices).into_bytes();
+    fs::write(output.join("THIRD-PARTY-NOTICES.md"), &notice_bytes)?;
+    let licensing = release::Licensing {
+        occurframe_code: "Apache-2.0 OR MIT (see LICENSE-APACHE and LICENSE-MIT)".into(),
+        reference_and_tooling_code: "Apache-2.0 OR MIT (see LICENSE-APACHE and LICENSE-MIT)".into(),
+        corpus_semantic_data:
+            "CC0-1.0 (occurframe/corpus authored vectors, registries and schemas)".into(),
+        third_party: "per crate; see THIRD-PARTY-NOTICES.md and DEPENDENCIES.json".into(),
+    };
+    fs::write(
+        output.join("LICENSES.md"),
+        render_licenses(&licensing, inventory.third_party_count),
+    )?;
+
+    let release_manifest = release::ReleaseManifest {
+        schema_version: "2.0.0".into(),
+        artifact_kind: "occurframe_release_candidate".into(),
+        tool_version: lock.tool_version.clone(),
+        tooling_repository: "https://github.com/occurframe/occurframe".into(),
+        tooling_commit_sha: release::commit_sha(repository_root, commit.as_deref())?,
+        toolchain: release::Toolchain::detect()?,
+        target_triples: target_triples.into_iter().collect(),
+        binaries,
+        corpus: release::CorpusIdentity {
+            version: corpus_report.corpus_version.clone(),
+            repository: "https://github.com/occurframe/corpus".into(),
+            sha: lock.corpus.sha.clone(),
+            canonical_digest: corpus_report.canonical_corpus_digest.clone(),
+            release_digest: corpus_report.release_digest.clone(),
+            vectors: corpus_report.vector_count,
+        },
+        runner_protocol_version: occurframe_wire::RUNNER_PROTOCOL_VERSION.into(),
+        certification: release::CertificationIdentity {
+            artifact_name: lock.certification.artifact_name.clone(),
+            profile_version: lock.certification.profile_version.clone(),
+            tooling_source_sha: lock.certification.tooling_source_sha.clone(),
+            certification_manifest_sha256: sha256_hex(&fs::read(
+                certification_root.join("certification-manifest.json"),
+            )?),
+            semantic_bundle_digest: lock.certification.semantic_bundle_digest.clone(),
+            matrix_sha256: lock.certification.matrix_sha256.clone(),
+            population: release::EvidencePopulation {
+                configured_builds: lock.certification.configured_builds,
+                reproducible_builds: lock.certification.reproducible_builds,
+                provenance_blocked_builds: lock.certification.unreproducible_builds,
+                vectors: lock.certification.vectors,
+                observations: lock.certification.observations,
+                semantic_divergence_vectors: lock.certification.semantic_divergence_vectors,
+                normative_violation_vectors: lock.certification.normative_violation_vectors,
+            },
+        },
+        licensing,
+        inventories: vec![
+            release::FileDigest {
+                path: "DEPENDENCIES.json".into(),
+                sha256: sha256_hex(&inventory_bytes),
+            },
+            release::FileDigest {
+                path: "THIRD-PARTY-NOTICES.md".into(),
+                sha256: sha256_hex(&notice_bytes),
+            },
+        ],
+        source_date_epoch: release::source_date_epoch(),
+        notes: vec![
+            "No build timestamp is recorded. Two assemblies of the same inputs produce the same manifest."
+                .into(),
+            "The digest of the transport archive cannot be carried inside the archive; `xtask release-attest` records it beside the release."
+                .into(),
+            "Third-party engine runtimes are deliberately not redistributed. Only the adapter identity registry ships."
+                .into(),
+        ],
+    };
     fs::write(
         output.join("release-manifest.json"),
-        canonical_pretty_json(&release_identity)?,
+        canonical_pretty_json(&release_manifest)?,
     )?;
+    fs::write(
+        output.join("VERSION"),
+        release::render_version_file(&release_manifest),
+    )?;
+
+    // Nothing is checksummed until the bundle is proven free of build-machine
+    // paths, so a leaking artifact can never acquire a valid SHA256SUMS.
+    let leaks = audit::audit_paths(output, &[])?;
+    if !leaks.leaks.is_empty() {
+        return Err(format!(
+            "release bundle contains {} absolute developer/CI path leak(s); first: {} in {}",
+            leaks.leaks.len(),
+            leaks.leaks[0].pattern,
+            leaks.leaks[0].file
+        )
+        .into());
+    }
+
     let checksum_path = output.join("SHA256SUMS");
     write_tree_checksums(output, &checksum_path)?;
     let bundle_digest = sha256_hex(&fs::read(&checksum_path)?);
@@ -604,21 +925,27 @@ fn print_json(value: &impl serde::Serialize) -> Result<(), serde_json::Error> {
 
 #[derive(Debug, Default)]
 struct Options {
-    values: std::collections::BTreeMap<String, PathBuf>,
+    /// Repeatable by name, so that an option such as `--forbid` can be given
+    /// more than once without a bespoke parser.
+    values: std::collections::BTreeMap<String, Vec<PathBuf>>,
 }
 
 impl Options {
     fn parse(arguments: impl Iterator<Item = String>) -> Result<Self, String> {
         let arguments: Vec<_> = arguments.collect();
         if arguments.len() % 2 != 0 {
-            return Err("options must be provided as --name PATH pairs".into());
+            return Err("options must be provided as --name VALUE pairs".into());
         }
-        let mut values = std::collections::BTreeMap::new();
+        let mut values: std::collections::BTreeMap<String, Vec<PathBuf>> =
+            std::collections::BTreeMap::new();
         for pair in arguments.chunks_exact(2) {
             let name = pair[0]
                 .strip_prefix("--")
                 .ok_or_else(|| format!("expected --option, found {}", pair[0]))?;
-            values.insert(name.to_owned(), PathBuf::from(&pair[1]));
+            values
+                .entry(name.to_owned())
+                .or_default()
+                .push(PathBuf::from(&pair[1]));
         }
         Ok(Self { values })
     }
@@ -626,14 +953,32 @@ impl Options {
     fn required(&self, name: &str) -> Result<PathBuf, String> {
         self.values
             .get(name)
+            .and_then(|values| values.first())
             .cloned()
             .ok_or_else(|| format!("missing --{name}"))
     }
 
     fn required_string(&self, name: &str) -> Result<String, String> {
+        self.optional_string(name)
+            .ok_or_else(|| format!("missing --{name}"))
+    }
+
+    fn optional_string(&self, name: &str) -> Option<String> {
         self.values
             .get(name)
+            .and_then(|values| values.first())
             .map(|value| value.to_string_lossy().into_owned())
-            .ok_or_else(|| format!("missing --{name}"))
+    }
+
+    fn all_strings(&self, name: &str) -> Vec<String> {
+        self.values
+            .get(name)
+            .map(|values| {
+                values
+                    .iter()
+                    .map(|value| value.to_string_lossy().into_owned())
+                    .collect()
+            })
+            .unwrap_or_default()
     }
 }

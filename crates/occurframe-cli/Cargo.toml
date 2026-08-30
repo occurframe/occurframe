@@ -1,5 +1,6 @@
 [package]
 name = "occurframe-cli"
+description = "Shared implementation behind the occurframe and oframe conformance clients"
 version.workspace = true
 edition.workspace = true
 license.workspace = true

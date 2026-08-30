@@ -15,6 +15,7 @@ occurframe-runner.workspace = true
 occurframe-wire.workspace = true
 serde.workspace = true
 serde_json.workspace = true
+walkdir.workspace = true
 
 [lints]
 workspace = true
