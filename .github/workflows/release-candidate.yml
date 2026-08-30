@@ -1,5 +1,9 @@
 name: Release Candidate Packaging
 
+# This workflow builds, assembles and verifies a release candidate. It publishes
+# nothing: no GitHub Release, no crates.io package, no tag, no merge to main.
+# Publication is owner-controlled; see docs/RELEASE-CHECKLIST.md.
+
 on:
   workflow_dispatch:
   push:
@@ -10,6 +14,10 @@ on:
 permissions:
   contents: read
   actions: read
+
+env:
+  CORPUS_REF: f5026940fcc667b1892e99f3abe95b424931bed0
+  RELEASE_NAME: occurframe-0.1.0-rc1
 
 jobs:
   platform-binaries:
@@ -34,8 +42,26 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
+
+      # Released binaries must not carry the absolute paths of the machine that
+      # built them: without remapping, panic location strings embed the runner's
+      # CARGO_HOME. Cargo's `trim-paths` profile option is still unstable on the
+      # pinned toolchain, so the remap is applied through RUSTFLAGS and then
+      # independently verified below.
+      - name: Compute release path remapping
+        shell: pwsh
+        run: |
+          $cargoHome = if ($env:CARGO_HOME) { $env:CARGO_HOME } else { Join-Path $HOME '.cargo' }
+          $checkout = (Get-Location).Path
+          foreach ($path in @($cargoHome, $checkout)) {
+            if ($path -match '\s') { throw "cannot remap a path containing whitespace: $path" }
+          }
+          "RUSTFLAGS=--remap-path-prefix=$cargoHome=/cargo --remap-path-prefix=$checkout=/occurframe" |
+            Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+
       - name: Build both shared-implementation aliases
         run: cargo build --locked --release -p occurframe-cli --bins
+
       - name: Smoke aliases and stage native binaries
         shell: pwsh
         run: |
@@ -54,10 +80,37 @@ jobs:
           New-Item -ItemType Directory -Force -Path dist/platform-binaries | Out-Null
           Copy-Item -LiteralPath $occurframe -Destination ('dist/platform-binaries/occurframe-${{ matrix.target }}${{ matrix.extension }}')
           Copy-Item -LiteralPath $oframe -Destination ('dist/platform-binaries/oframe-${{ matrix.target }}${{ matrix.extension }}')
+
+      # A leak here fails the platform job rather than being discovered later in
+      # the assembled bundle.
+      - name: Absolute developer/CI path leak detection
+        run: cargo run --locked -p xtask -- audit-paths --root dist/platform-binaries
+
+      - name: Measure binary reproducibility for this target
+        shell: pwsh
+        run: |
+          $first = Get-FileHash -Algorithm SHA256 ('dist/platform-binaries/occurframe-${{ matrix.target }}${{ matrix.extension }}')
+          cargo clean --release
+          cargo build --locked --release -p occurframe-cli --bins
+          $rebuilt = Get-FileHash -Algorithm SHA256 (Join-Path 'target/release' ('occurframe' + '${{ matrix.extension }}'))
+          $identical = $first.Hash -eq $rebuilt.Hash
+          "| ${{ matrix.target }} | $($first.Hash.ToLower()) | $($rebuilt.Hash.ToLower()) | $identical |" |
+            Out-File -FilePath "binary-reproducibility-${{ matrix.target }}.md" -Encoding utf8
+          Write-Host "binary reproducibility for ${{ matrix.target }}: $identical"
+          # Reported, not enforced: a difference is recorded honestly rather than
+          # failing the release, and the release notes must not claim
+          # bit-reproducible binaries unless this says so.
+
       - uses: actions/upload-artifact@v4
         with:
           name: platform-${{ matrix.target }}
           path: dist/platform-binaries/*
+          if-no-files-found: error
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: reproducibility-${{ matrix.target }}
+          path: binary-reproducibility-${{ matrix.target }}.md
           if-no-files-found: error
 
   assemble:
@@ -70,15 +123,18 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: occurframe/corpus
-          ref: f5026940fcc667b1892e99f3abe95b424931bed0
+          ref: ${{ env.CORPUS_REF }}
           path: corpus-authority
       - uses: dtolnay/rust-toolchain@stable
+
       - name: Download native binaries
         uses: actions/download-artifact@v4
         with:
           pattern: platform-*
           path: dist/platform-binaries
           merge-multiple: true
+
+      # The certified RC2 evidence is republished, never re-measured here.
       - name: Download locked RC2 certification evidence
         uses: actions/download-artifact@v4
         with:
@@ -86,30 +142,134 @@ jobs:
           path: dist/certification
           github-token: ${{ secrets.GITHUB_TOKEN }}
           run-id: 33323736242
+
       - name: Restore executable bits for Unix binaries
         run: chmod +x dist/platform-binaries/occurframe-*apple-darwin dist/platform-binaries/oframe-*apple-darwin dist/platform-binaries/occurframe-*linux-gnu dist/platform-binaries/oframe-*linux-gnu
+
+      # Two independent assemblies from clean state. Identical file manifests and
+      # identical SHA256SUMS are required.
       - name: Assemble release candidate twice
         run: |
-          cargo run --locked -p xtask -- release-package --root . --corpus corpus-authority --certification dist/certification/rc2 --binaries dist/platform-binaries --lock release/evidence-lock.json --output dist/release/occurframe-0.1.0-rc1
-          cargo run --locked -p xtask -- release-package --root . --corpus corpus-authority --certification dist/certification/rc2 --binaries dist/platform-binaries --lock release/evidence-lock.json --output dist/release/reproducibility-check
-          cmp dist/release/occurframe-0.1.0-rc1/SHA256SUMS dist/release/reproducibility-check/SHA256SUMS
-      - name: Create deterministic transport archive
+          cargo run --locked -p xtask -- release-package \
+            --root . --corpus corpus-authority --certification dist/certification/rc2 \
+            --binaries dist/platform-binaries --lock release/evidence-lock.json \
+            --commit "${{ github.sha }}" --output "dist/release/${RELEASE_NAME}"
+          cargo run --locked -p xtask -- release-package \
+            --root . --corpus corpus-authority --certification dist/certification/rc2 \
+            --binaries dist/platform-binaries --lock release/evidence-lock.json \
+            --commit "${{ github.sha }}" --output dist/release/reproducibility-check
+
+      - name: Compare the two assemblies
         run: |
-          tar --sort=name --mtime='@0' --owner=0 --group=0 --numeric-owner -cf dist/release/occurframe-0.1.0-rc1.tar -C dist/release occurframe-0.1.0-rc1
-          gzip -n dist/release/occurframe-0.1.0-rc1.tar
-          sha256sum dist/release/occurframe-0.1.0-rc1.tar.gz > dist/release/occurframe-0.1.0-rc1.tar.gz.sha256
+          ( cd "dist/release/${RELEASE_NAME}" && find . -type f | sort ) > /tmp/manifest-1.txt
+          ( cd dist/release/reproducibility-check && find . -type f | sort ) > /tmp/manifest-2.txt
+          diff /tmp/manifest-1.txt /tmp/manifest-2.txt
+          cmp "dist/release/${RELEASE_NAME}/SHA256SUMS" dist/release/reproducibility-check/SHA256SUMS
+          diff -r "dist/release/${RELEASE_NAME}" dist/release/reproducibility-check
+
+      - name: Absolute developer/CI path leak detection
+        run: cargo run --locked -p xtask -- audit-paths --root "dist/release/${RELEASE_NAME}"
+
+      # The inventory must be reproducible from the workspace, not a stale file
+      # someone committed once.
+      - name: License and dependency inventory validation
+        run: |
+          cargo run --locked -p xtask -- dependency-inventory \
+            --manifest Cargo.toml --output /tmp/DEPENDENCIES.json --notices /tmp/THIRD-PARTY-NOTICES.md
+          cmp /tmp/DEPENDENCIES.json "dist/release/${RELEASE_NAME}/DEPENDENCIES.json"
+          cmp /tmp/THIRD-PARTY-NOTICES.md "dist/release/${RELEASE_NAME}/THIRD-PARTY-NOTICES.md"
+          test -s "dist/release/${RELEASE_NAME}/LICENSES.md"
+          test -s "dist/release/${RELEASE_NAME}/LICENSE-APACHE"
+          test -s "dist/release/${RELEASE_NAME}/LICENSE-MIT"
+
+      - name: Create deterministic transport archives
+        run: |
+          for source in "${RELEASE_NAME}" reproducibility-check; do
+            tar --sort=name --mtime='@0' --owner=0 --group=0 --numeric-owner \
+              -cf "dist/release/${source}.tar" -C dist/release \
+              --transform "s|^${source}|${RELEASE_NAME}|" "${source}"
+            gzip -n "dist/release/${source}.tar"
+          done
+          cmp "dist/release/${RELEASE_NAME}.tar.gz" dist/release/reproducibility-check.tar.gz
+          sha256sum "dist/release/${RELEASE_NAME}.tar.gz" > "dist/release/${RELEASE_NAME}.tar.gz.sha256"
+          rm dist/release/reproducibility-check.tar.gz
+          rm -rf dist/release/reproducibility-check
+
+      - name: Record the out-of-bundle attestation
+        run: |
+          cargo run --locked -p xtask -- release-attest \
+            --bundle "dist/release/${RELEASE_NAME}" \
+            --archive "dist/release/${RELEASE_NAME}.tar.gz" \
+            --output dist/release/release-attestation.json
+
+      - name: Collect per-target binary reproducibility results
+        uses: actions/download-artifact@v4
+        with:
+          pattern: reproducibility-*
+          path: dist/reproducibility
+          merge-multiple: true
+
       - name: Publish job summary
         run: |
-          echo '## Occurframe 0.1.0-rc1' >> "$GITHUB_STEP_SUMMARY"
-          echo '- Corpus: 1.0.0-rc2 / 4804772d20fb36c7329b2c5f2f28e264d9bc00b11e407e76d9836fc38cd80470' >> "$GITHUB_STEP_SUMMARY"
-          echo '- Platform aliases: 8 binaries across 4 targets' >> "$GITHUB_STEP_SUMMARY"
-          echo '- Packaging rerun: byte-identical SHA256SUMS' >> "$GITHUB_STEP_SUMMARY"
-          echo '- Publication: artifact only; no GitHub Release or crates.io publication' >> "$GITHUB_STEP_SUMMARY"
+          {
+            echo "## Occurframe 0.1.0-rc1"
+            echo "- Corpus: 1.0.0-rc2 / 4804772d20fb36c7329b2c5f2f28e264d9bc00b11e407e76d9836fc38cd80470"
+            echo "- Platform aliases: 8 binaries across 4 targets"
+            echo "- Two-pass assembly: identical file manifests, SHA256SUMS and archives"
+            echo "- Publication: artifact only; no GitHub Release, tag, crates.io package or main merge"
+            echo
+            echo "### Binary reproducibility (measured, not assumed)"
+            echo "| Target | First build | Rebuild | Identical |"
+            echo "| --- | --- | --- | --- |"
+            cat dist/reproducibility/*.md
+          } >> "$GITHUB_STEP_SUMMARY"
+
       - uses: actions/upload-artifact@v4
         with:
           name: occurframe-0.1.0-rc1
           path: |
-            dist/release/occurframe-0.1.0-rc1/
-            dist/release/occurframe-0.1.0-rc1.tar.gz
-            dist/release/occurframe-0.1.0-rc1.tar.gz.sha256
+            dist/release/
           if-no-files-found: error
+
+  clean-room:
+    name: Clean-room consumer (${{ matrix.target }})
+    needs: assemble
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-24.04
+            target: x86_64-unknown-linux-gnu
+          - os: windows-2025
+            target: x86_64-pc-windows-msvc
+          - os: macos-14
+            target: aarch64-apple-darwin
+          - os: macos-15-intel
+            target: x86_64-apple-darwin
+    runs-on: ${{ matrix.os }}
+    steps:
+      # Only the harness is checked out. No Cargo, no Rust toolchain and no
+      # corpus checkout are installed in this job: the release has to stand on
+      # its own for someone who downloaded an archive.
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: tests/clean-room
+          sparse-checkout-cone-mode: false
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Download the release candidate
+        uses: actions/download-artifact@v4
+        with:
+          name: occurframe-0.1.0-rc1
+          path: downloaded
+
+      # Verified from the transport archive, exactly as a consumer receives it.
+      - name: Clean-room verification
+        shell: bash
+        run: |
+          python tests/clean-room/verify_release.py \
+            --bundle "downloaded/${RELEASE_NAME}.tar.gz" \
+            --target "${{ matrix.target }}"
