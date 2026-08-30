@@ -1,0 +1,88 @@
+name: Adapter certification smoke
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 4 * * 2"
+
+jobs:
+  migrated-adapters:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check out pinned RC2 authority
+        uses: actions/checkout@v4
+        with:
+          repository: occurframe/corpus
+          ref: f5026940fcc667b1892e99f3abe95b424931bed0
+          path: corpus
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: 3.11.15
+          cache: pip
+          cache-dependency-path: runners/python/requirements.lock
+
+      - name: Restore pinned Python builds
+        run: |
+          python -m venv runners/python/.venv
+          runners/python/.venv/bin/python -m pip install --disable-pip-version-check -r runners/python/requirements.lock
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.13
+
+      - name: Restore pinned JavaScript builds
+        working-directory: runners/javascript
+        run: npm ci
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: 1.24.7
+          cache-dependency-path: runners/go/go.sum
+
+      - name: Build pinned Go adapter
+        working-directory: runners/go
+        run: |
+          go mod download
+          mkdir -p bin
+          go build -trimpath -o bin/occurframe-go-runner .
+
+      - name: Install pinned PHP runtime
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: 8.4.21
+
+      - name: Restore pinned PHP engine sources
+        shell: bash
+        run: |
+          mkdir -p runners/php/.adapter-deps
+          git clone --filter=blob:none https://github.com/dragonmantank/cron-expression.git runners/php/.adapter-deps/php-cron-expression
+          git -C runners/php/.adapter-deps/php-cron-expression checkout d425a2403c17d7cf911c55a7170f073979a9f382
+          git clone --filter=blob:none https://github.com/rlanvin/php-rrule.git runners/php/.adapter-deps/php-rrule
+          git -C runners/php/.adapter-deps/php-rrule checkout 93a083db12dcb6f58e4840392a22e158ce96f1ff
+
+      - name: Run representative protocol-v2 smoke
+        run: >-
+          cargo run -p xtask -- runner-smoke-all
+          --root .
+          --corpus corpus
+          --schema corpus/schemas/runner-protocol-v2.schema.json
+          --registry runners/registry/runner-builds.json
+          --output smoke-artifacts/normalized-observations.ndjson
+          --diagnostics smoke-artifacts/runner-diagnostics.json
+          --report adapter-migration-report.json
+
+      - name: Archive migration smoke artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: adapter-migration-smoke-${{ github.sha }}
+          path: |
+            adapter-migration-report.json
+            smoke-artifacts/
+          if-no-files-found: error
