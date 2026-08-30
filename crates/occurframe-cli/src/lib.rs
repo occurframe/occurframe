@@ -10,6 +10,7 @@ use std::{
     collections::{BTreeMap, BTreeSet},
     env,
     fmt::Write as _,
+    fs,
     io::{self, IsTerminal, Write},
     path::{Path, PathBuf},
     process::ExitCode,
@@ -422,6 +423,30 @@ fn resolve_build<'a>(registry: &'a RunnerRegistry, id: &str) -> Result<&'a Runne
     })
 }
 
+/// The root of an installed/extracted release, derived only from the running
+/// executable.
+///
+/// Discovery must never depend on the current working directory, a Cargo
+/// workspace layout, or a source checkout: an extracted release has to work from
+/// an arbitrary directory. Symlinked installs are resolved so that
+/// `/usr/local/bin/occurframe -> /opt/occurframe-0.1.0-rc1/bin/occurframe`
+/// still finds `/opt/occurframe-0.1.0-rc1`.
+fn bundle_root() -> Option<PathBuf> {
+    let executable = env::current_exe().ok()?;
+    let executable = fs::canonicalize(&executable).unwrap_or(executable);
+    executable.parent()?.parent().map(Path::to_path_buf)
+}
+
+/// The bundled corpus layout produced by `xtask release-package`.
+const BUNDLED_CORPUS: &str = "corpus";
+/// The bundled adapter-identity registry produced by `xtask release-package`.
+const BUNDLED_REGISTRY: &str = "adapters/runner-builds.json";
+const PROTOCOL_SCHEMA: &str = "schemas/runner-protocol-v2.schema.json";
+
+fn is_corpus_directory(path: &Path) -> bool {
+    path.join("manifest.json").is_file() || path.join("vectors").is_dir()
+}
+
 fn discover_corpus(explicit: Option<&Path>) -> Result<PathBuf, CliError> {
     if let Some(path) = explicit {
         return Ok(path.to_path_buf());
@@ -430,19 +455,18 @@ fn discover_corpus(explicit: Option<&Path>) -> Result<PathBuf, CliError> {
         return Ok(PathBuf::from(path));
     }
     let mut candidates = Vec::new();
-    if let Ok(executable) = env::current_exe()
-        && let Some(bin) = executable.parent()
-        && let Some(bundle) = bin.parent()
-    {
-        candidates.push(bundle.join("corpus"));
+    // Release layout first: an extracted bundle always answers for itself.
+    if let Some(bundle) = bundle_root() {
+        candidates.push(bundle.join(BUNDLED_CORPUS));
     }
+    // Source-checkout convenience only, and only after the release layout.
     if let Ok(cwd) = env::current_dir() {
-        candidates.push(cwd.join("corpus"));
+        candidates.push(cwd.join(BUNDLED_CORPUS));
         candidates.push(cwd.join("../corpus"));
     }
     candidates
         .into_iter()
-        .find(|path| path.join("manifest.json").is_file() || path.join("vectors").is_dir())
+        .find(|path| is_corpus_directory(path))
         .ok_or_else(|| {
             CliError::environment(
                 "compatible corpus not found; pass --corpus or set OCCURFRAME_CORPUS",
@@ -455,62 +479,79 @@ fn discover_runner_registry() -> Result<PathBuf, CliError> {
         return Ok(PathBuf::from(path));
     }
     let mut candidates = Vec::new();
+    // Release layout first, for the same reason as the corpus.
+    if let Some(bundle) = bundle_root() {
+        candidates.push(bundle.join(BUNDLED_REGISTRY));
+    }
     if let Ok(cwd) = env::current_dir() {
         candidates.push(cwd.join("runners/registry/runner-builds.json"));
     }
-    if let Ok(executable) = env::current_exe()
-        && let Some(bin) = executable.parent()
-        && let Some(bundle) = bin.parent()
-    {
-        candidates.push(bundle.join("adapters/runner-builds.json"));
-    }
     candidates.into_iter().find(|path| path.is_file()).ok_or_else(|| {
         CliError::environment(
-            "runner registry not found; run from a tooling checkout or set OCCURFRAME_RUNNER_REGISTRY",
+            "runner registry not found; set OCCURFRAME_RUNNER_REGISTRY, or run from a tooling checkout",
         )
     })
 }
 
+/// Resolve the base directory that relative `launch.program`, `launch.arguments`
+/// and `launch.working_directory` entries in a registry are interpreted against.
+///
+/// The rule is deterministic and never falls back to the process working
+/// directory: a registry supplied through `OCCURFRAME_RUNNER_REGISTRY` may live
+/// anywhere on the filesystem, inside or outside the release, and the paths it
+/// declares are resolved relative to the registry itself.
 fn discover_runner_root(registry_path: &Path) -> Result<PathBuf, CliError> {
     if let Some(path) = env::var_os("OCCURFRAME_RUNNER_ROOT") {
         return Ok(PathBuf::from(path));
     }
-    let parent = registry_path
+    // A bare `runner-builds.json` names the current directory explicitly rather
+    // than silently inheriting an arbitrary absolute working directory.
+    let Some(parent) = registry_path
         .parent()
-        .ok_or_else(|| CliError::environment("runner registry path has no parent directory"))?;
-    if parent.file_name().and_then(|name| name.to_str()) == Some("registry")
-        && parent
-            .parent()
-            .and_then(Path::file_name)
-            .and_then(|name| name.to_str())
-            == Some("runners")
-    {
+        .filter(|parent| !parent.as_os_str().is_empty())
+    else {
+        return Ok(PathBuf::from("."));
+    };
+    let parent_name = parent.file_name().and_then(|name| name.to_str());
+    let grandparent_name = parent
+        .parent()
+        .and_then(Path::file_name)
+        .and_then(|name| name.to_str());
+    // Source checkout: <root>/runners/registry/runner-builds.json -> <root>
+    if parent_name == Some("registry") && grandparent_name == Some("runners") {
         return parent
             .parent()
             .and_then(Path::parent)
             .map(Path::to_path_buf)
             .ok_or_else(|| CliError::environment("cannot resolve tooling repository root"));
     }
-    env::current_dir().map_err(|error| {
-        CliError::environment(format!("cannot resolve runner working directory: {error}"))
-    })
+    // Release bundle: <bundle>/adapters/runner-builds.json -> <bundle>
+    if parent_name == Some("adapters") {
+        if let Some(bundle) = parent.parent() {
+            return Ok(bundle.to_path_buf());
+        }
+    }
+    // Any other registry: resolve relative launch paths beside the registry.
+    Ok(parent.to_path_buf())
 }
 
 fn discover_protocol_schema(corpus: &Path, root: &Path) -> Result<PathBuf, CliError> {
     if let Some(path) = env::var_os("OCCURFRAME_RUNNER_PROTOCOL_SCHEMA") {
         return Ok(PathBuf::from(path));
     }
-    [
-        corpus.join("schemas/runner-protocol-v2.schema.json"),
-        root.join("../corpus/schemas/runner-protocol-v2.schema.json"),
-    ]
-    .into_iter()
-    .find(|path| path.is_file())
-    .ok_or_else(|| {
-        CliError::environment(
-            "runner protocol schema not found; set OCCURFRAME_RUNNER_PROTOCOL_SCHEMA",
-        )
-    })
+    let mut candidates = vec![corpus.join(PROTOCOL_SCHEMA)];
+    if let Some(bundle) = bundle_root() {
+        candidates.push(bundle.join(BUNDLED_CORPUS).join(PROTOCOL_SCHEMA));
+    }
+    candidates.push(root.join("../corpus").join(PROTOCOL_SCHEMA));
+    candidates
+        .into_iter()
+        .find(|path| path.is_file())
+        .ok_or_else(|| {
+            CliError::environment(
+                "runner protocol schema not found; set OCCURFRAME_RUNNER_PROTOCOL_SCHEMA",
+            )
+        })
 }
 
 fn build_report(
@@ -1129,6 +1170,39 @@ mod tests {
             .map(|(name, digest)| (name, digest.to_owned()))
             .collect::<BTreeMap<_, _>>();
         assert_eq!(actual, expected);
+    }
+
+    #[test]
+    fn runner_root_is_derived_from_the_registry_and_never_from_the_working_directory() {
+        // Source checkout: <root>/runners/registry/runner-builds.json
+        assert_eq!(
+            discover_runner_root(Path::new(
+                "/anywhere/tooling/runners/registry/runner-builds.json"
+            ))
+            .expect("checkout root"),
+            PathBuf::from("/anywhere/tooling")
+        );
+        // Extracted release bundle: <bundle>/adapters/runner-builds.json
+        assert_eq!(
+            discover_runner_root(Path::new(
+                "/opt/occurframe-0.1.0-rc1/adapters/runner-builds.json"
+            ))
+            .expect("bundle root"),
+            PathBuf::from("/opt/occurframe-0.1.0-rc1")
+        );
+        // An external maintainer's registry, outside any Occurframe layout: the
+        // base directory is the registry's own directory, not the process CWD.
+        assert_eq!(
+            discover_runner_root(Path::new("/srv/my-engine/occurframe-registry.json"))
+                .expect("external root"),
+            PathBuf::from("/srv/my-engine")
+        );
+        // A bare file name resolves explicitly, rather than silently inheriting
+        // an arbitrary absolute working directory.
+        assert_eq!(
+            discover_runner_root(Path::new("runner-builds.json")).expect("bare registry"),
+            PathBuf::from(".")
+        );
     }
 
     #[test]
