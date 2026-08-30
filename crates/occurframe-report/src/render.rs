@@ -5,8 +5,113 @@ use occurframe_wire::TzdbRelease;
 
 use crate::{
     Result,
-    model::{DifferentialMatrix, DivergenceKind, ReconciliationReport, outcome_name, verdict_name},
+    model::{
+        CertificationManifest, DifferentialMatrix, DivergenceKind, ReconciliationReport,
+        outcome_name, verdict_name,
+    },
 };
+
+pub(crate) fn public_release_markdown(
+    matrix: &DifferentialMatrix,
+    manifest: &CertificationManifest,
+    provenance_blocked_builds: &[String],
+) -> Result<Vec<u8>> {
+    let summary = &matrix.summary;
+    let mut output = String::new();
+    writeln!(output, "# Occurframe RC2 Differential Evidence")?;
+    writeln!(output)?;
+    writeln!(
+        output,
+        "This is candidate evidence for Occurframe `{}` over corpus `{}` using runner protocol `{}`. The corpus is the normative authority; observations and this report are derived evidence.",
+        manifest.certification_profile_version,
+        matrix.corpus_version,
+        matrix.runner_protocol_version
+    )?;
+    writeln!(output)?;
+    writeln!(
+        output,
+        "Only **{}/{} historical builds were reproducible**. The provenance-blocked builds are: {}. They were not replaced with newer dependencies or engine versions.",
+        summary.reproducible_builds,
+        summary.configured_builds,
+        provenance_blocked_builds
+            .iter()
+            .map(|build| format!("`{build}`"))
+            .collect::<Vec<_>>()
+            .join(", ")
+    )?;
+    writeln!(output)?;
+    writeln!(output, "## Certified population")?;
+    writeln!(output)?;
+    writeln!(output, "- Vectors: {}", summary.vectors)?;
+    writeln!(
+        output,
+        "- Complete observations: {} / {}",
+        summary.actual_observations, summary.expected_observations
+    )?;
+    writeln!(
+        output,
+        "- Semantic-divergence vectors: {}",
+        summary.semantic_divergence_vectors
+    )?;
+    writeln!(
+        output,
+        "- Normative-violation vectors: {}",
+        summary.normative_violation_vectors
+    )?;
+    writeln!(
+        output,
+        "- Documented policy-difference vectors: {}",
+        summary.documented_policy_difference_vectors
+    )?;
+    writeln!(
+        output,
+        "- Documented dialect-difference vectors: {}",
+        summary.documented_dialect_difference_vectors
+    )?;
+    writeln!(
+        output,
+        "- Ambiguous-standard vectors: {} ({} with multiple measured answers)",
+        summary.ambiguous_standard_vectors, summary.ambiguous_standard_divergent_vectors
+    )?;
+    writeln!(
+        output,
+        "- TZDB-dependent difference vectors: {}",
+        summary.tzdb_difference_vectors
+    )?;
+    writeln!(output)?;
+    writeln!(output, "## Execution outcomes")?;
+    writeln!(output)?;
+    write_count_table(
+        &mut output,
+        "Measured outcome counts",
+        &summary.outcome_counts,
+    )?;
+    writeln!(
+        output,
+        "The evidence includes **{} timeout** and **{} engine errors**; neither is hidden or converted into a semantic answer. Unsupported cells ({}) are also retained explicitly.",
+        count(&summary.outcome_counts, "timeout"),
+        count(&summary.outcome_counts, "engine_error"),
+        count(&summary.outcome_counts, "unsupported")
+    )?;
+    writeln!(output)?;
+    writeln!(output, "## How to interpret divergence")?;
+    writeln!(output)?;
+    writeln!(
+        output,
+        "A divergence is not automatically a defect. The RC2 authority distinguishes normative answers, named policy differences, named dialect differences, standard ambiguity, known implementation divergence, and TZDB-provenance differences. Unsupported, engine errors, timeouts, and runner failures are excluded from semantic-answer grouping."
+    )?;
+    writeln!(output)?;
+    writeln!(
+        output,
+        "RC2's measured divergence count is not required to reproduce Research II's earlier `157/184` headline. The engine population, protocol outcome taxonomy, provenance requirements, and scoring are more precise in protocol v2."
+    )?;
+    writeln!(output)?;
+    writeln!(
+        output,
+        "No engine ranking or invented overall quality score is presented. See `matrix.json` for every cell, its normalized outcome, conformance verdict, matched case, warnings, and provenance reference."
+    )?;
+    Ok(output.into_bytes())
+}
 
 pub(crate) fn matrix_csv(matrix: &DifferentialMatrix) -> Result<Vec<u8>> {
     let vector_by_id: BTreeMap<_, _> = matrix

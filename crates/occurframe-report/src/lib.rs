@@ -99,6 +99,18 @@ pub fn load_json(path: &Path) -> Result<Value> {
     Ok(serde_json::from_slice(&fs::read(path)?)?)
 }
 
+/// Render the candidate public evidence report from an already-certified matrix.
+///
+/// This is a presentation-only projection. It does not rescore cells or alter
+/// semantic answer groups.
+pub fn public_release_report(
+    matrix: &DifferentialMatrix,
+    manifest: &CertificationManifest,
+    provenance_blocked_builds: &[String],
+) -> Result<Vec<u8>> {
+    render::public_release_markdown(matrix, manifest, provenance_blocked_builds)
+}
+
 pub fn generate_bundle(input: &BundleInput<'_>, output: &Path) -> Result<CertificationSummary> {
     validate_profile(input)?;
     validate_completeness(input)?;

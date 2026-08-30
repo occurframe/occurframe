@@ -1,0 +1,111 @@
+name: Release Candidate Packaging
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  platform-binaries:
+    name: ${{ matrix.target }} binaries
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-24.04
+            target: x86_64-unknown-linux-gnu
+            extension: ""
+          - os: windows-2025
+            target: x86_64-pc-windows-msvc
+            extension: .exe
+          - os: macos-14
+            target: aarch64-apple-darwin
+            extension: ""
+          - os: macos-15-intel
+            target: x86_64-apple-darwin
+            extension: ""
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Build both shared-implementation aliases
+        run: cargo build --locked --release -p occurframe-cli --bins
+      - name: Smoke aliases and stage native binaries
+        shell: pwsh
+        run: |
+          $occurframe = Join-Path 'target/release' ('occurframe' + '${{ matrix.extension }}')
+          $oframe = Join-Path 'target/release' ('oframe' + '${{ matrix.extension }}')
+          $longVersion = & $occurframe --version
+          if ($LASTEXITCODE -ne 0) { throw 'occurframe --version failed' }
+          $shortVersion = & $oframe --version
+          if ($LASTEXITCODE -ne 0) { throw 'oframe --version failed' }
+          if ($longVersion -cne $shortVersion) { throw 'alias version output differs' }
+          $longHelp = & $occurframe --help
+          if ($LASTEXITCODE -ne 0) { throw 'occurframe --help failed' }
+          $shortHelp = & $oframe --help
+          if ($LASTEXITCODE -ne 0) { throw 'oframe --help failed' }
+          if (($longHelp -join "`n") -cne ($shortHelp -join "`n")) { throw 'alias help output differs' }
+          New-Item -ItemType Directory -Force -Path dist/platform-binaries | Out-Null
+          Copy-Item -LiteralPath $occurframe -Destination ('dist/platform-binaries/occurframe-${{ matrix.target }}${{ matrix.extension }}')
+          Copy-Item -LiteralPath $oframe -Destination ('dist/platform-binaries/oframe-${{ matrix.target }}${{ matrix.extension }}')
+      - uses: actions/upload-artifact@v4
+        with:
+          name: platform-${{ matrix.target }}
+          path: dist/platform-binaries/*
+          if-no-files-found: error
+
+  assemble:
+    name: Deterministic release bundle
+    needs: platform-binaries
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check out immutable RC2 authority
+        uses: actions/checkout@v4
+        with:
+          repository: occurframe/corpus
+          ref: f5026940fcc667b1892e99f3abe95b424931bed0
+          path: corpus-authority
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Download native binaries
+        uses: actions/download-artifact@v4
+        with:
+          pattern: platform-*
+          path: dist/platform-binaries
+          merge-multiple: true
+      - name: Download locked RC2 certification evidence
+        uses: actions/download-artifact@v4
+        with:
+          name: occurframe-rc2-certification-eeeb7fb822888cdba2e0e09a9c692bed8ca024b0
+          path: dist/certification/rc2
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          run-id: 33323736242
+      - name: Restore executable bits for Unix binaries
+        run: chmod +x dist/platform-binaries/occurframe-*apple-darwin dist/platform-binaries/oframe-*apple-darwin dist/platform-binaries/occurframe-*linux-gnu dist/platform-binaries/oframe-*linux-gnu
+      - name: Assemble release candidate twice
+        run: |
+          cargo run --locked -p xtask -- release-package --root . --corpus corpus-authority --certification dist/certification/rc2 --binaries dist/platform-binaries --lock release/evidence-lock.json --output dist/release/occurframe-0.1.0-rc1
+          cargo run --locked -p xtask -- release-package --root . --corpus corpus-authority --certification dist/certification/rc2 --binaries dist/platform-binaries --lock release/evidence-lock.json --output dist/release/reproducibility-check
+          cmp dist/release/occurframe-0.1.0-rc1/SHA256SUMS dist/release/reproducibility-check/SHA256SUMS
+      - name: Create deterministic transport archive
+        run: |
+          tar --sort=name --mtime='@0' --owner=0 --group=0 --numeric-owner -cf dist/release/occurframe-0.1.0-rc1.tar -C dist/release occurframe-0.1.0-rc1
+          gzip -n dist/release/occurframe-0.1.0-rc1.tar
+          sha256sum dist/release/occurframe-0.1.0-rc1.tar.gz > dist/release/occurframe-0.1.0-rc1.tar.gz.sha256
+      - name: Publish job summary
+        run: |
+          echo '## Occurframe 0.1.0-rc1' >> "$GITHUB_STEP_SUMMARY"
+          echo '- Corpus: 1.0.0-rc2 / 4804772d20fb36c7329b2c5f2f28e264d9bc00b11e407e76d9836fc38cd80470' >> "$GITHUB_STEP_SUMMARY"
+          echo '- Platform aliases: 8 binaries across 4 targets' >> "$GITHUB_STEP_SUMMARY"
+          echo '- Packaging rerun: byte-identical SHA256SUMS' >> "$GITHUB_STEP_SUMMARY"
+          echo '- Publication: artifact only; no GitHub Release or crates.io publication' >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: occurframe-0.1.0-rc1
+          path: |
+            dist/release/occurframe-0.1.0-rc1/
+            dist/release/occurframe-0.1.0-rc1.tar.gz
+            dist/release/occurframe-0.1.0-rc1.tar.gz.sha256
+          if-no-files-found: error

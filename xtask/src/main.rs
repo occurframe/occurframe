@@ -6,12 +6,13 @@ use std::{
 };
 
 use occurframe_conformance::{
-    load_and_validate_corpus, migrate_rc1, pack_release, verify_deterministic_pack,
-    verify_manifest, verify_migration, write_tree_checksums,
+    canonical_pretty_json, load_and_validate_corpus, migrate_rc1, pack_release, sha256_hex,
+    verify_deterministic_pack, verify_manifest, verify_migration, write_tree_checksums,
 };
 use occurframe_report::{
-    BundleInput, generate_bundle, load_json, load_legacy_build_map, load_profile,
-    verify_bundle_checksums, verify_deterministic_bundles,
+    BundleInput, CertificationManifest, DifferentialMatrix, generate_bundle, load_json,
+    load_legacy_build_map, load_profile, public_release_report, verify_bundle_checksums,
+    verify_deterministic_bundles,
 };
 use occurframe_runner::{
     CaseExecution, ProtocolSchema, ReproducibilityStatus, RunnerBuild, RunnerRegistry, run_batch,
@@ -190,7 +191,214 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
             verify_bundle_checksums(&options.required("directory")?)?;
             print_json(&serde_json::json!({"checksums_valid": true}))?;
         }
+        "release-package" => {
+            let report = package_release_candidate(
+                &options.required("root")?,
+                &options.required("corpus")?,
+                &options.required("certification")?,
+                &options.required("binaries")?,
+                &options.required("lock")?,
+                &options.required("output")?,
+            )?;
+            print_json(&report)?;
+        }
         _ => return Err(format!("unknown command: {command}").into()),
+    }
+    Ok(())
+}
+
+#[derive(Debug, serde::Deserialize)]
+#[serde(deny_unknown_fields)]
+struct ReleaseEvidenceLock {
+    schema_version: String,
+    tool_version: String,
+    corpus: ReleaseCorpusLock,
+    certification: ReleaseCertificationLock,
+    platform_binaries: Vec<String>,
+    provenance_blocked_builds: Vec<String>,
+}
+
+#[derive(Debug, serde::Deserialize)]
+#[serde(deny_unknown_fields)]
+struct ReleaseCorpusLock {
+    version: String,
+    sha: String,
+    vectors: usize,
+    canonical_digest: String,
+    release_digest: String,
+}
+
+#[derive(Debug, serde::Deserialize)]
+#[serde(deny_unknown_fields)]
+struct ReleaseCertificationLock {
+    artifact_name: String,
+    tooling_source_sha: String,
+    profile_version: String,
+    semantic_bundle_digest: String,
+    matrix_sha256: String,
+    configured_builds: usize,
+    reproducible_builds: usize,
+    unreproducible_builds: usize,
+    vectors: usize,
+    observations: usize,
+    semantic_divergence_vectors: usize,
+    normative_violation_vectors: usize,
+}
+
+#[derive(Debug, serde::Serialize)]
+struct ReleasePackageReport {
+    tool_version: String,
+    corpus_version: String,
+    corpus_digest: String,
+    certification_digest: String,
+    binary_count: usize,
+    bundle_directory: String,
+    bundle_digest: String,
+    certification_artifact_name: String,
+}
+
+#[allow(clippy::too_many_lines)]
+fn package_release_candidate(
+    repository_root: &Path,
+    corpus_root: &Path,
+    certification_root: &Path,
+    binaries_root: &Path,
+    lock_path: &Path,
+    output: &Path,
+) -> Result<ReleasePackageReport, Box<dyn std::error::Error>> {
+    if output.exists() {
+        return Err(format!(
+            "release output already exists: {}; use a new empty path",
+            output.display()
+        )
+        .into());
+    }
+    let lock: ReleaseEvidenceLock = serde_json::from_slice(&fs::read(lock_path)?)?;
+    if lock.schema_version != "1.0.0" || lock.tool_version != env!("CARGO_PKG_VERSION") {
+        return Err("release evidence lock does not match the tooling prerelease".into());
+    }
+    verify_bundle_checksums(certification_root)?;
+    let manifest: CertificationManifest = serde_json::from_slice(&fs::read(
+        certification_root.join("certification-manifest.json"),
+    )?)?;
+    let matrix_bytes = fs::read(certification_root.join("matrix.json"))?;
+    let matrix: DifferentialMatrix = serde_json::from_slice(&matrix_bytes)?;
+    validate_release_evidence(&lock, &manifest, &matrix, &matrix_bytes)?;
+
+    fs::create_dir_all(output.join("bin"))?;
+    fs::create_dir_all(output.join("reports"))?;
+    fs::create_dir_all(output.join("certification"))?;
+    fs::create_dir_all(output.join("adapters"))?;
+    for binary in &lock.platform_binaries {
+        let source = binaries_root.join(binary);
+        if !source.is_file() {
+            return Err(format!("missing required platform binary {}", source.display()).into());
+        }
+        fs::copy(&source, output.join("bin").join(binary))?;
+    }
+
+    let corpus_report = pack_release(corpus_root, &output.join("corpus"))?;
+    if corpus_report.corpus_version != lock.corpus.version
+        || corpus_report.vector_count != lock.corpus.vectors
+        || corpus_report.canonical_corpus_digest != lock.corpus.canonical_digest
+        || corpus_report.release_digest != lock.corpus.release_digest
+    {
+        return Err("generated corpus distribution differs from the release lock".into());
+    }
+    fs::create_dir_all(output.join("corpus/schemas"))?;
+    fs::copy(
+        corpus_root.join("schemas/runner-protocol-v2.schema.json"),
+        output.join("corpus/schemas/runner-protocol-v2.schema.json"),
+    )?;
+    fs::copy(
+        repository_root.join("runners/registry/runner-builds.json"),
+        output.join("adapters/runner-builds.json"),
+    )?;
+    fs::copy(
+        certification_root.join("matrix.json"),
+        output.join("reports/matrix.json"),
+    )?;
+    fs::write(
+        output.join("reports/differential-report.md"),
+        public_release_report(&matrix, &manifest, &lock.provenance_blocked_builds)?,
+    )?;
+    for name in ["certification-manifest.json", "environment.json"] {
+        fs::copy(
+            certification_root.join(name),
+            output.join("certification").join(name),
+        )?;
+    }
+    fs::copy(
+        repository_root.join("release/README.md"),
+        output.join("README.md"),
+    )?;
+    let mut license_count = 0_usize;
+    for entry in fs::read_dir(repository_root)? {
+        let entry = entry?;
+        if entry.file_type()?.is_file()
+            && entry.file_name().to_string_lossy().starts_with("LICENSE")
+        {
+            fs::copy(entry.path(), output.join(entry.file_name()))?;
+            license_count += 1;
+        }
+    }
+    if license_count == 0 {
+        return Err("no LICENSE file was available for release packaging".into());
+    }
+    let release_identity = serde_json::json!({
+        "artifact_kind": "occurframe_release_candidate",
+        "certification_artifact_name": lock.certification.artifact_name,
+        "certification_semantic_bundle_digest": lock.certification.semantic_bundle_digest,
+        "corpus_canonical_digest": lock.corpus.canonical_digest,
+        "corpus_sha": lock.corpus.sha,
+        "corpus_version": lock.corpus.version,
+        "runner_protocol_version": occurframe_wire::RUNNER_PROTOCOL_VERSION,
+        "schema_version": "1.0.0",
+        "tool_version": lock.tool_version
+    });
+    fs::write(
+        output.join("release-manifest.json"),
+        canonical_pretty_json(&release_identity)?,
+    )?;
+    let checksum_path = output.join("SHA256SUMS");
+    write_tree_checksums(output, &checksum_path)?;
+    let bundle_digest = sha256_hex(&fs::read(&checksum_path)?);
+    Ok(ReleasePackageReport {
+        tool_version: lock.tool_version,
+        corpus_version: corpus_report.corpus_version,
+        corpus_digest: corpus_report.canonical_corpus_digest,
+        certification_digest: manifest.semantic_bundle_digest,
+        binary_count: lock.platform_binaries.len(),
+        bundle_directory: output.to_string_lossy().into_owned(),
+        bundle_digest,
+        certification_artifact_name: lock.certification.artifact_name,
+    })
+}
+
+fn validate_release_evidence(
+    lock: &ReleaseEvidenceLock,
+    manifest: &CertificationManifest,
+    matrix: &DifferentialMatrix,
+    matrix_bytes: &[u8],
+) -> Result<(), Box<dyn std::error::Error>> {
+    let certification = &lock.certification;
+    let manifest_matches = manifest.tooling_source_sha == certification.tooling_source_sha
+        && manifest.certification_profile_version == certification.profile_version
+        && manifest.semantic_bundle_digest == certification.semantic_bundle_digest
+        && manifest.corpus_sha == lock.corpus.sha
+        && manifest.corpus_version == lock.corpus.version
+        && manifest.configured_builds == certification.configured_builds
+        && manifest.reproducible_builds == certification.reproducible_builds
+        && manifest.unreproducible_builds == certification.unreproducible_builds
+        && manifest.vectors == certification.vectors
+        && manifest.observations == certification.observations;
+    let matrix_matches = sha256_hex(matrix_bytes) == certification.matrix_sha256
+        && matrix.summary.semantic_divergence_vectors == certification.semantic_divergence_vectors
+        && matrix.summary.normative_violation_vectors == certification.normative_violation_vectors
+        && matrix.summary.actual_observations == certification.observations
+        && matrix.summary.vectors == certification.vectors;
+    if !manifest_matches || !matrix_matches {
+        return Err("certification evidence differs from the immutable release lock".into());
     }
     Ok(())
 }
