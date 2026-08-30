@@ -34,6 +34,15 @@ failure among the reproducible builds.
 
 Generated `dist/` content is disposable and must not become normative source. Occurrence arrays are ordered observations: never sort or deduplicate them.
 
+Public CLI development uses the shared implementation for both aliases:
+
+```text
+cargo run -p occurframe-cli --bin occurframe -- test --engine <build-id> --corpus ../corpus --format json
+cargo run -p occurframe-cli --bin oframe -- test --engine <build-id> --corpus ../corpus --format junit
+```
+
+The checked-in registry is found at `runners/registry/runner-builds.json` when running from the repository root. Tests or separately prepared third-party adapters may set `OCCURFRAME_RUNNER_REGISTRY`, `OCCURFRAME_RUNNER_ROOT`, and `OCCURFRAME_RUNNER_PROTOCOL_SCHEMA`; this changes only transport/configuration locations and does not introduce another adapter contract.
+
 Fast correctness CI validates authority, fake-runner protocol containment, and
 deterministic serialization on desktop platforms. The manual/scheduled adapter
 certification workflow restores pinned historical builds and runs only the
@@ -60,3 +69,11 @@ Do not run a candidate official certification on a developer interpreter. The
 runtime version is part of runner identity and is enforced during `hello`.
 Dependency restoration happens during image construction; the actual
 certification container runs with `--network none`.
+
+Release-candidate packaging is deterministic and refuses evidence, corpus, or binaries that differ from `release/evidence-lock.json`:
+
+```text
+cargo run -p xtask -- release-package --root . --corpus ../corpus --certification dist/certification/rc2 --binaries dist/platform-binaries --lock release/evidence-lock.json --output dist/release/occurframe-0.1.0-rc1
+```
+
+The output path must not already exist. Full platform assembly is performed by the manual release-candidate CI workflow; it uploads artifacts but never publishes GitHub Releases or crates.

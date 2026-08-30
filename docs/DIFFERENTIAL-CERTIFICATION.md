@@ -125,6 +125,8 @@ The canonical bundle is generated under `dist/certification/rc2/` with a
 manifest and `SHA256SUMS`. It is uploaded by the dedicated Full Differential
 Certification workflow and is not routinely committed.
 
+The candidate public projection used by `0.1.0-rc1` is locked to the successful certification at tooling SHA `eeeb7fb822888cdba2e0e09a9c692bed8ca024b0`. It reports 25 configured builds, 23 reproducible builds, 184 vectors, 4,232 observations, 163 semantic-divergence vectors, and 76 normative-violation vectors. Its pathology inventory includes one timeout and eight engine errors; neither category is hidden or counted as a semantic answer. Release packaging verifies the certified matrix SHA and semantic bundle digest before rendering the public report.
+
 ## Ruby status
 
 `ruby.fugit` and `ruby.ice_cube` remain

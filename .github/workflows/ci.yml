@@ -1,4 +1,4 @@
-name: Rust authority CI
+name: Fast correctness CI
 
 on:
   pull_request:
@@ -11,14 +11,24 @@ jobs:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
     runs-on: ${{ matrix.os }}
+    env:
+      OCCURFRAME_TEST_CORPUS: ${{ github.workspace }}/corpus-authority
     steps:
       - uses: actions/checkout@v4
+      - name: Check out immutable RC2 authority
+        uses: actions/checkout@v4
+        with:
+          repository: occurframe/corpus
+          ref: f5026940fcc667b1892e99f3abe95b424931bed0
+          path: corpus-authority
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: clippy, rustfmt
       - run: cargo fmt --check
       - run: cargo clippy --workspace --all-targets -- -D warnings
       - run: cargo test --workspace
+      - name: Verify bundled-corpus identity and deterministic pack
+        run: cargo run --locked -p xtask -- verify-deterministic --corpus corpus-authority
       - name: Documentation (Unix)
         if: runner.os != 'Windows'
         run: RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps
