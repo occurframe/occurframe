@@ -10,6 +10,20 @@ use serde_json::Value;
 
 /// The runner protocol version implemented by this authority layer.
 pub const RUNNER_PROTOCOL_VERSION: &str = "2.0";
+/// The behavioural specification this tooling implements and measures against.
+///
+/// The specification versions independently of the tooling, the corpus and the
+/// runner protocol: it is the semantics an implementation is measured against,
+/// not the artefact that measures. Version `1.0.0-rc1` is the one resolved by
+/// ERRATA-001 — ORACLE ONLY CLI surface, under which Occurframe v1 ships one
+/// semantic command, `test`, and `explain`, `classify` and `occurrences` are
+/// deferred behind the engine gate because each requires a recurrence evaluator
+/// that the ORACLE ONLY verdict does not authorise.
+///
+/// This constant is the single literal in the workspace. `release-package`
+/// checks it against the pinned value in `release/evidence-lock.json` and, when
+/// the corpus checkout carries `spec/specification.json`, against that too.
+pub const SPECIFICATION_VERSION: &str = "1.0.0-rc1";
 /// The official per-case certification budget in milliseconds.
 pub const OFFICIAL_BUDGET_MS: u64 = 8_000;
 

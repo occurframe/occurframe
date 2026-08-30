@@ -278,9 +278,24 @@ struct ReleaseEvidenceLock {
     tool_version: String,
     corpus: ReleaseCorpusLock,
     certification: ReleaseCertificationLock,
+    specification: ReleaseSpecificationLock,
     evidence_archive: ReleaseEvidenceArchiveLock,
     platform_binaries: Vec<String>,
     provenance_blocked_builds: Vec<String>,
+}
+
+/// The behavioural specification this release implements.
+///
+/// It versions independently of the tooling, the corpus and the runner protocol.
+/// The value is pinned here and checked against `occurframe_wire::SPECIFICATION_VERSION`
+/// and, when the corpus checkout carries `spec/specification.json`, against that
+/// declaration too — so the three cannot drift apart unnoticed.
+#[derive(Debug, serde::Deserialize)]
+#[serde(deny_unknown_fields)]
+struct ReleaseSpecificationLock {
+    version: String,
+    errata_resolving_command_doctrine: String,
+    shipped_v1_commands: Vec<String>,
 }
 
 /// The durable, in-repository copy of the certified RC2 evidence.
@@ -441,6 +456,51 @@ fn verify_evidence_archive(
     })
 }
 
+/// Prove the specification version agrees everywhere it is recorded.
+///
+/// Three places can state it: the compiled-in constant, the immutable release
+/// lock, and the corpus's own `spec/specification.json`. A release whose
+/// components disagreed about which specification it implements would be
+/// unreproducible, so packaging refuses rather than picking one.
+fn validate_specification_identity(
+    lock: &ReleaseSpecificationLock,
+    corpus_root: &Path,
+) -> Result<(), Box<dyn std::error::Error>> {
+    if lock.version != occurframe_wire::SPECIFICATION_VERSION {
+        return Err(format!(
+            "specification version mismatch: lock {}, tooling {}",
+            lock.version,
+            occurframe_wire::SPECIFICATION_VERSION
+        )
+        .into());
+    }
+    if lock.shipped_v1_commands != ["test"] {
+        return Err(format!(
+            "the shipped v1 command surface is `test` alone; the lock names {:?}",
+            lock.shipped_v1_commands
+        )
+        .into());
+    }
+    // The corpus is the authoring side. Older pinned checkouts predate the
+    // declaration, so its absence is not an error; disagreement is.
+    let declaration = corpus_root.join("spec/specification.json");
+    if declaration.is_file() {
+        let declared: serde_json::Value = serde_json::from_slice(&fs::read(&declaration)?)?;
+        let declared_version = declared
+            .get("specification_version")
+            .and_then(serde_json::Value::as_str)
+            .ok_or("corpus spec/specification.json has no specification_version")?;
+        if declared_version != lock.version {
+            return Err(format!(
+                "specification version mismatch: corpus declares {declared_version}, release lock pins {}",
+                lock.version
+            )
+            .into());
+        }
+    }
+    Ok(())
+}
+
 /// Human-readable licensing map for the bundle root.
 fn render_licenses(licensing: &release::Licensing, third_party_count: usize) -> String {
     format!(
@@ -527,6 +587,7 @@ fn package_release_candidate(
     if lock.schema_version != "1.0.0" || lock.tool_version != env!("CARGO_PKG_VERSION") {
         return Err("release evidence lock does not match the tooling prerelease".into());
     }
+    validate_specification_identity(&lock.specification, corpus_root)?;
     verify_bundle_checksums(certification_root)?;
     let manifest: CertificationManifest = serde_json::from_slice(&fs::read(
         certification_root.join("certification-manifest.json"),
@@ -684,6 +745,9 @@ fn package_release_candidate(
         schema_version: "2.0.0".into(),
         artifact_kind: "occurframe_release_candidate".into(),
         tool_version: lock.tool_version.clone(),
+        specification_version: lock.specification.version.clone(),
+        specification_errata: vec![lock.specification.errata_resolving_command_doctrine.clone()],
+        shipped_commands: lock.specification.shipped_v1_commands.clone(),
         tooling_repository: "https://github.com/occurframe/occurframe".into(),
         tooling_commit_sha: release::commit_sha(repository_root, commit.as_deref())?,
         toolchain: release::Toolchain::detect()?,
@@ -735,6 +799,8 @@ fn package_release_candidate(
             "The digest of the transport archive cannot be carried inside the archive; `xtask release-attest` records it beside the release."
                 .into(),
             "Third-party engine runtimes are deliberately not redistributed. Only the adapter identity registry ships."
+                .into(),
+            "Occurframe ships one semantic command, `test`. `explain`, `classify` and `occurrences` are deferred behind the engine gate by ERRATA-001 because each requires a recurrence evaluator that the ORACLE ONLY verdict does not authorise. No evaluator is present in this release."
                 .into(),
         ],
     };
@@ -1059,5 +1125,68 @@ impl Options {
                     .collect()
             })
             .unwrap_or_default()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn specification_lock(version: &str, commands: &[&str]) -> ReleaseSpecificationLock {
+        ReleaseSpecificationLock {
+            version: version.to_owned(),
+            errata_resolving_command_doctrine: "ERRATA-001".into(),
+            shipped_v1_commands: commands.iter().map(|value| (*value).to_owned()).collect(),
+        }
+    }
+
+    #[test]
+    fn the_specification_version_must_agree_everywhere_it_is_recorded() {
+        let empty = Path::new("does-not-exist");
+        // The pinned value, the compiled-in constant and the shipped surface all agree.
+        assert!(
+            validate_specification_identity(
+                &specification_lock(occurframe_wire::SPECIFICATION_VERSION, &["test"]),
+                empty,
+            )
+            .is_ok()
+        );
+        // A lock that drifts from the tooling constant is refused.
+        assert!(
+            validate_specification_identity(&specification_lock("9.9.9", &["test"]), empty)
+                .expect_err("drift must fail")
+                .to_string()
+                .contains("specification version mismatch")
+        );
+        // A lock that claims a deferred evaluator command is shipped is refused:
+        // ERRATA-001 fixes the v1 surface at `test` alone.
+        assert!(
+            validate_specification_identity(
+                &specification_lock(occurframe_wire::SPECIFICATION_VERSION, &["test", "explain"]),
+                empty,
+            )
+            .expect_err("a deferred command must not be declared shipped")
+            .to_string()
+            .contains("shipped v1 command surface")
+        );
+    }
+
+    #[test]
+    fn a_corpus_declaring_a_different_specification_version_is_refused() {
+        let directory =
+            std::env::temp_dir().join(format!("occurframe-spec-identity-{}", std::process::id()));
+        fs::create_dir_all(directory.join("spec")).expect("fixture directory");
+        fs::write(
+            directory.join("spec/specification.json"),
+            br#"{"specification_version": "0.0.1-other"}"#,
+        )
+        .expect("fixture declaration");
+        let error = validate_specification_identity(
+            &specification_lock(occurframe_wire::SPECIFICATION_VERSION, &["test"]),
+            &directory,
+        )
+        .expect_err("cross-repository drift must fail");
+        assert!(error.to_string().contains("corpus declares 0.0.1-other"));
+        fs::remove_dir_all(&directory).expect("remove isolated fixture directory");
     }
 }

@@ -40,5 +40,12 @@
     "ruby.ice_cube"
   ],
   "schema_version": "1.0.0",
-  "tool_version": "0.1.0-rc1"
+  "specification": {
+    "errata_resolving_command_doctrine": "ERRATA-001",
+    "shipped_v1_commands": [
+      "test"
+    ],
+    "version": "1.0.0-rc1"
+  },
+  "tool_version": "0.1.0-rc2"
 }

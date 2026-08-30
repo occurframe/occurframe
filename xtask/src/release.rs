@@ -131,6 +131,13 @@ pub struct ReleaseManifest {
     pub schema_version: String,
     pub artifact_kind: String,
     pub tool_version: String,
+    /// The behavioural specification this release implements. It versions
+    /// independently of the tool, the corpus and the runner protocol.
+    pub specification_version: String,
+    /// The erratum that fixed the shipped command doctrine this release obeys.
+    pub specification_errata: Vec<String>,
+    /// The complete set of semantic commands this release ships.
+    pub shipped_commands: Vec<String>,
     pub tooling_repository: String,
     pub tooling_commit_sha: String,
     pub toolchain: Toolchain,
@@ -198,8 +205,9 @@ pub fn commit_sha(
 #[must_use]
 pub fn render_version_file(manifest: &ReleaseManifest) -> String {
     format!(
-        "Occurframe tooling: {}\nCorpus:             {}\nRunner protocol:    {}\nCertification:      {}\nCommit:             {}\n",
+        "Occurframe tooling: {}\nSpecification:      {}\nCorpus:             {}\nRunner protocol:    {}\nCertification:      {}\nCommit:             {}\n",
         manifest.tool_version,
+        manifest.specification_version,
         manifest.corpus.version,
         manifest.runner_protocol_version,
         manifest.certification.profile_version,
