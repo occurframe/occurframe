@@ -6,10 +6,18 @@ Occurframe `0.1.0-rc1` implements one public operation:
 
 ```text
 occurframe test --engine <configured-build-id>
-oframe test --engine <configured-build-id>
+oframe    test --engine <configured-build-id>
 ```
 
-The aliases call one shared `occurframe_cli::run()` implementation. A test loads and validates the pinned RC2 corpus, resolves one immutable engine build from the runner registry, validates the protocol `hello`, executes every selected vector, preserves normalized observations, uses `occurframe-conformance` for scoring, and renders the result. The CLI never parses or evaluates recurrence expressions.
+The two executable names are aliases for one shared `occurframe_cli::run()`
+implementation. Options, output bytes and exit codes are identical; nothing
+depends on which name was invoked.
+
+A test loads and validates the pinned RC2 corpus, resolves one immutable engine
+build from the runner registry, validates the protocol `hello` against that
+build's configured identity, executes every selected vector, preserves the
+normalized observations, delegates scoring to `occurframe-conformance`, and
+renders the result. The CLI never parses or evaluates a recurrence expression.
 
 ## Options
 
@@ -19,12 +27,42 @@ The aliases call one shared `occurframe_cli::run()` implementation. A test loads
 --family <family>      select a corpus family; repeatable
 --tzdb <requirement>   any, exact:<release>, bounded, unknown, known, source:<name>
 --format <format>      text, json, junit
---no-color             disable text color (NO_COLOR is also honored)
+--no-color             accepted for forward compatibility (see note below)
+-h, --help             print help
 ```
 
-With no family selection, every vector is attempted. A family filter uses authored corpus family IDs; it never silently removes unsupported cells. The shipped distribution is discovered beside the executable. An explicit corpus must still match the locked RC2 version, canonical digest, and 184-vector population.
+With no family selection every vector is attempted. `--family` takes authored
+corpus family IDs and never silently removes an unsupported cell: a case the
+engine cannot express is reported as unsupported, not omitted. An unknown family
+is a usage error and the message lists the available families.
 
-Explicit `--format` always wins. Otherwise a terminal gets concise text and redirected stdout gets one deterministic JSON object. Text starts with provenance and aggregate counts, then prints only actionable rows. JSON retains every verdict/outcome distinction and an Occurframe version. JUnit maps conformant/admissible cases to success, unsupported and open/unscored cases to skipped, semantic mismatch to failure, and engine error/timeout/runner failure to error. JSON and JUnit never contain color.
+`--tzdb` turns a provenance expectation into an enforced precondition. If the
+observed provenance does not satisfy it the run fails as an environment failure
+(exit `4`) rather than producing evidence you cannot reproduce.
+
+An explicit `--corpus` must still match the locked RC2 version, canonical digest
+and 184-vector population. The lock is compiled into the binary, so pointing at a
+different corpus is a hard failure, not a silent change of meaning.
+
+**Note on `--no-color`.** The current text renderer emits no ANSI colour at all,
+so `--no-color` and the `NO_COLOR` environment variable are accepted and have no
+observable effect. They are honoured now so that a future coloured renderer
+cannot break existing invocations. JSON and JUnit are never coloured.
+
+## Output formats
+
+An explicit `--format` always wins. Otherwise a terminal gets concise text and
+redirected stdout gets one deterministic JSON object.
+
+- **text** — provenance and aggregate counts first, then only actionable rows.
+- **json** — a single object with canonical key ordering. Identical inputs
+  produce byte-identical output, so it diffs cleanly and can be committed as a
+  baseline. It retains every verdict and outcome distinction, per-vector
+  classification, execution status, native engine outcome, matched policy or
+  dialect case, warnings, and full corpus and engine identity.
+- **junit** — conformant and admissible map to success, unsupported and
+  open/unscored to skipped, semantic mismatch to failure, and engine error,
+  timeout and runner failure to error.
 
 ## Exit codes
 
@@ -35,14 +73,83 @@ Explicit `--format` always wins. Otherwise a terminal gets concise text and redi
 4  corpus, registry, runtime, identity, provenance, or runner infrastructure failure
 ```
 
-Exit `4` takes precedence over `1` if both classes are present. Codes `2` (schedule rejection) and `5` (truncation) remain reserved for the frozen future surface and are never manufactured by `test`.
+Exit `4` takes precedence over `1` when both are present: a run whose evidence is
+untrustworthy is not a statement about the engine. Codes `2` (schedule rejection)
+and `5` (truncation) remain reserved for the frozen future surface and are never
+manufactured by `test`.
+
+## Discovery
+
+Nothing is resolved relative to the current working directory. An extracted
+release works from any directory, and a registry may live anywhere on the
+filesystem.
+
+**Corpus**, first match wins:
+
+1. `--corpus <path>`
+2. `OCCURFRAME_CORPUS`
+3. `<directory containing the executable>/../corpus` — the bundled corpus of an
+   installed or extracted release. The executable path is canonicalized first, so
+   a symlink from `/usr/local/bin` still resolves to the real bundle.
+4. `./corpus`, then `../corpus` — source-checkout convenience only.
+
+**Runner registry**, first match wins:
+
+1. `OCCURFRAME_RUNNER_REGISTRY`
+2. `<executable directory>/../adapters/runner-builds.json` — the release's
+   adapter identity registry.
+3. `./runners/registry/runner-builds.json` — source-checkout convenience only.
+
+**Runner root** — the base that relative `launch.program`, `launch.arguments` and
+`launch.working_directory` entries are resolved against:
+
+1. `OCCURFRAME_RUNNER_ROOT`, which may point anywhere, inside or outside the
+   release.
+2. `<root>/runners/registry/runner-builds.json` → `<root>` (source checkout).
+3. `<bundle>/adapters/runner-builds.json` → `<bundle>` (extracted release).
+4. Otherwise, the directory containing the registry file. This is what makes a
+   third-party registry portable: put the registry beside your runner and its
+   relative launch paths work wherever the directory is moved.
+
+**Protocol schema**, first match wins:
+
+1. `OCCURFRAME_RUNNER_PROTOCOL_SCHEMA`
+2. `<corpus>/schemas/runner-protocol-v2.schema.json`
+3. `<bundle>/corpus/schemas/runner-protocol-v2.schema.json`
+4. `<runner root>/../corpus/schemas/runner-protocol-v2.schema.json`
+
+## Environment variables
+
+| Variable | Effect |
+| --- | --- |
+| `OCCURFRAME_CORPUS` | Corpus checkout or packed distribution to use. |
+| `OCCURFRAME_RUNNER_REGISTRY` | Protocol-v2 registry file describing engine builds. |
+| `OCCURFRAME_RUNNER_ROOT` | Base directory for relative launch paths. |
+| `OCCURFRAME_RUNNER_PROTOCOL_SCHEMA` | Protocol schema, when not beside the corpus. |
+| `NO_COLOR` | Accepted; currently has no observable effect (see above). |
 
 ## Engine discovery and third-party adapters
 
-From a source checkout, engine IDs come from `runners/registry/runner-builds.json`. Unknown IDs are rejected with the configured ID inventory; the CLI never guesses a version or dialect. A release contains this identity registry but deliberately excludes third-party runtimes.
+From a source checkout, engine IDs come from
+`runners/registry/runner-builds.json`. A release contains the same identity
+registry under `adapters/`, but deliberately excludes third-party engine
+runtimes: the release records what an engine build *is*, not a copy of it.
 
-A third-party maintainer uses the same NDJSON protocol 2.0 and registry model—no plugin loader, dynamic library, or language binding exists. Point the CLI at a prepared registry/root with `OCCURFRAME_RUNNER_REGISTRY` and `OCCURFRAME_RUNNER_ROOT`; optionally set `OCCURFRAME_RUNNER_PROTOCOL_SCHEMA` when the schema is not beside the corpus. The orchestrator verifies runner, engine, runtime, capabilities, dialect/profile claims, and tzdb provenance against `hello` before trusting results.
+Unknown IDs are rejected with the configured ID inventory; the CLI never guesses
+a version or a dialect. A build whose registry entry is marked
+`unreproducible_provenance` is configured but refused at run time, with the
+recorded reason, because evidence that cannot be reproduced is not evidence.
+
+A third-party maintainer uses the same NDJSON protocol `2.0` and registry model.
+There is no plugin loader, dynamic library or language binding. Point the CLI at
+a prepared registry with `OCCURFRAME_RUNNER_REGISTRY`, optionally override the
+base with `OCCURFRAME_RUNNER_ROOT`, and see
+[Writing a runner](WRITING-A-RUNNER.md). A complete worked example ships in
+`examples/minimal-runner/`.
 
 ## Reserved commands
 
-`explain`, `classify`, and `occurrences` are recognized only as reserved/not-yet-available names. They are not redirected, faked, or evaluator-backed. This prerelease does not claim the full frozen v1 command surface.
+`explain`, `classify` and `occurrences` are recognized only as reserved,
+not-yet-available names and return a usage error. They are not redirected, faked
+or evaluator-backed. This prerelease does not claim the full frozen v1 command
+surface; see [Known contradictions](KNOWN-CONTRADICTIONS.md).

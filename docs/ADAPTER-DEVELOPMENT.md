@@ -1,5 +1,10 @@
 # Adapter development
 
+> Integrating your own engine? Read [Writing a runner](WRITING-A-RUNNER.md)
+> instead. That is the public, normative description of protocol `2.0`, and it
+> assumes no knowledge of this repository. This page covers the in-repository
+> adapters used for Occurframe's own certified differential evidence.
+
 An adapter is intentionally small:
 
 ```text

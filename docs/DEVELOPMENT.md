@@ -77,3 +77,59 @@ cargo run -p xtask -- release-package --root . --corpus ../corpus --certificatio
 ```
 
 The output path must not already exist. Full platform assembly is performed by the manual release-candidate CI workflow; it uploads artifacts but never publishes GitHub Releases or crates.
+
+Release builds must remap the builder's absolute paths, or panic metadata ships
+the machine's `CARGO_HOME`. Cargo's `trim-paths` profile option is not stable on
+the pinned toolchain, so the remap goes through `RUSTFLAGS`:
+
+```text
+RUSTFLAGS="--remap-path-prefix=$CARGO_HOME=/cargo --remap-path-prefix=$PWD=/occurframe" cargo build --locked --release -p occurframe-cli --bins
+```
+
+Packaging refuses to write `SHA256SUMS` until an audit proves the bundle carries
+no absolute developer or CI path, and the same audit is available directly:
+
+```text
+cargo run -p xtask -- audit-paths --root dist/release/occurframe-0.1.0-rc1
+cargo run -p xtask -- audit-paths --root dist/platform-binaries --forbid /srv/build
+```
+
+The dependency inventory and third-party notices are generated, never
+hand-maintained:
+
+```text
+cargo run -p xtask -- dependency-inventory --manifest Cargo.toml --output DEPENDENCIES.json --notices THIRD-PARTY-NOTICES.md
+```
+
+The digest of a transport archive cannot live inside the archive it describes, so
+it is recorded beside the release:
+
+```text
+cargo run -p xtask -- release-attest --bundle dist/release/occurframe-0.1.0-rc1 --archive dist/release/occurframe-0.1.0-rc1.tar.gz --output dist/release/release-attestation.json
+```
+
+Two consumer-facing suites complement the Rust tests. The fast one runs in
+ordinary CI against a source checkout; the clean-room one runs against a packaged
+release and deliberately assumes no Cargo, Rust, Git or checkout on the consumer
+machine:
+
+```text
+python3 tests/example-runner/smoke.py --occurframe target/debug/occurframe --oframe target/debug/oframe --corpus packed-corpus
+python3 tests/clean-room/verify_release.py --bundle dist/release/occurframe-0.1.0-rc1.tar.gz --target x86_64-unknown-linux-gnu
+```
+
+Source-package readiness: `occurframe-wire` and `occurframe-conformance` are
+publishable; `occurframe-cli`, `occurframe-report`, `occurframe-runner` and
+`xtask` are `publish = false` and intentionally implementation-private. Internal
+path dependencies carry a version requirement, because Cargo refuses to package
+a crate whose dependency has none.
+
+```text
+cargo package -p occurframe-wire --list
+cargo package -p occurframe-wire
+```
+
+`cargo package -p occurframe-conformance` cannot complete until
+`occurframe-wire` exists on crates.io, because packaging resolves that
+dependency from the registry rather than from the path. That is publication
+ordering, not a defect.
