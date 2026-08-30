@@ -1,0 +1,30 @@
+{
+  "_comment": [
+    "PROTOCOL EXAMPLE ONLY. These are fixed answers, not computed results, and",
+    "they are not a conformance reference. The subset exists so that one run of",
+    "`occurframe test` exercises every terminal shape an engine maintainer has",
+    "to implement: an `occurrences` answer that the scorer accepts, a",
+    "deliberate `rejection` of invalid input, and `unsupported` for everything",
+    "outside the table. Any vector absent here answers `unsupported`.",
+    "The `occurrences` values below are copied from the authored RC2",
+    "expectation for CRON-ANCH-001 under the `exclusive` start-inclusivity",
+    "policy that this example declares in its `hello`. That is what makes the",
+    "example score as conformant; it demonstrates the scoring path, and says",
+    "nothing about any real implementation."
+  ],
+  "vectors": {
+    "CRON-ANCH-001": {
+      "outcome": "occurrences",
+      "occurrences": [
+        "2026-01-02T12:00:00",
+        "2026-01-03T12:00:00",
+        "2026-01-04T12:00:00"
+      ]
+    },
+    "CRON-INV-001": {
+      "outcome": "rejection",
+      "code": "field_value_out_of_range",
+      "message": "minute field value 60 is outside the documented 0-59 range"
+    }
+  }
+}

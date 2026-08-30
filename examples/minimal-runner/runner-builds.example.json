@@ -1,0 +1,61 @@
+{
+  "schema_version": "1.0.0",
+  "builds": [
+    {
+      "build_id": "example.minimal",
+      "protocol_version": "2.0",
+      "runner": {
+        "name": "occurframe-minimal-example-runner",
+        "version": "2.0.0",
+        "provenance": "source:examples/minimal-runner/runner.py"
+      },
+      "engine": {
+        "name": "occurframe-example-fixture",
+        "version": "0.0.0-example",
+        "provenance": "not a recurrence engine: fixed answers replayed from examples/minimal-runner/fixtures.json"
+      },
+      "language": "Python",
+      "runtime_name": "CPython",
+      "runtime_requirement": "example",
+      "launch": {
+        "program": "python3",
+        "arguments": [
+          "runner.py",
+          "--runtime-version",
+          "example"
+        ],
+        "working_directory": ".",
+        "environment": {}
+      },
+      "supported_operations": [
+        "cron.next",
+        "cron.parse"
+      ],
+      "dialect_ids": [
+        "cron.vixie@1"
+      ],
+      "semantic_profile_claims": {
+        "cron.start_inclusivity": "exclusive"
+      },
+      "tzdb_provenance_acquisition": "none: this example resolves no timezones and consults no timezone database",
+      "tzdb_source": "example fixture (no timezone database is consulted)",
+      "allowed_tzdb_release_kinds": [
+        "exact"
+      ],
+      "fallback_tzdb_provenance": {
+        "source": "example fixture (no timezone database is consulted)",
+        "release_kind": "exact",
+        "release": "none"
+      },
+      "representative_vectors": [
+        "CRON-ANCH-001",
+        "CRON-INV-001"
+      ],
+      "reproducibility": {
+        "status": "reproducible",
+        "setup": "any CPython 3 interpreter on PATH as python3; no third-party packages"
+      },
+      "legacy_source": "not applicable: protocol integration example, not migrated Phase II evidence"
+    }
+  ]
+}
