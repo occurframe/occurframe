@@ -17,7 +17,7 @@ permissions:
 
 env:
   CORPUS_REF: f5026940fcc667b1892e99f3abe95b424931bed0
-  RELEASE_NAME: occurframe-0.1.0-rc1
+  RELEASE_NAME: occurframe-0.1.0-rc2
 
 jobs:
   platform-binaries:
@@ -219,7 +219,7 @@ jobs:
       - name: Publish job summary
         run: |
           {
-            echo "## Occurframe 0.1.0-rc1"
+            echo "## Occurframe 0.1.0-rc2"
             echo "- Corpus: 1.0.0-rc2 / 4804772d20fb36c7329b2c5f2f28e264d9bc00b11e407e76d9836fc38cd80470"
             echo "- Platform aliases: 8 binaries across 4 targets"
             echo "- Two-pass assembly: identical file manifests, SHA256SUMS and archives"
@@ -233,7 +233,7 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: occurframe-0.1.0-rc1
+          name: occurframe-0.1.0-rc2
           path: |
             dist/release/
           if-no-files-found: error
@@ -269,7 +269,7 @@ jobs:
       - name: Download the release candidate
         uses: actions/download-artifact@v4
         with:
-          name: occurframe-0.1.0-rc1
+          name: occurframe-0.1.0-rc2
           path: downloaded
 
       # Verified from the transport archive, exactly as a consumer receives it.
