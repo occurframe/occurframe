@@ -46,15 +46,19 @@ struct RunningProcess {
 impl RunningProcess {
     fn spawn(build: &RunnerBuild, root: &Path, stderr_capacity: usize) -> std::io::Result<Self> {
         let program_path = Path::new(&build.launch.program);
-        let mut program = if program_path.components().count() > 1 && program_path.is_relative() {
+        let program = if program_path.components().count() > 1 && program_path.is_relative() {
             root.join(program_path)
         } else {
             program_path.to_path_buf()
         };
         #[cfg(windows)]
-        if !program.exists() && program.extension().is_none() {
-            program.set_extension("exe");
-        }
+        let program = {
+            let mut platform_program = program;
+            if !platform_program.exists() && platform_program.extension().is_none() {
+                platform_program.set_extension("exe");
+            }
+            platform_program
+        };
         let working_directory = root.join(&build.launch.working_directory);
         let mut command = Command::new(program);
         command
