@@ -19,16 +19,29 @@ rust-version = "1.85"
 [workspace.dependencies]
 hex = "0.4.3"
 jsonschema = { version = "0.33.0", default-features = false }
-occurframe-conformance = { path = "crates/occurframe-conformance" }
-occurframe-cli = { path = "crates/occurframe-cli" }
-occurframe-report = { path = "crates/occurframe-report" }
-occurframe-runner = { path = "crates/occurframe-runner" }
-occurframe-wire = { path = "crates/occurframe-wire" }
+# Internal path dependencies also carry a version requirement. Cargo refuses to
+# package a crate whose dependency has none, so without this `occurframe-wire`
+# is publishable but `occurframe-conformance`, which depends on it, is not.
+occurframe-conformance = { path = "crates/occurframe-conformance", version = "0.1.0-rc1" }
+occurframe-cli = { path = "crates/occurframe-cli", version = "0.1.0-rc1" }
+occurframe-report = { path = "crates/occurframe-report", version = "0.1.0-rc1" }
+occurframe-runner = { path = "crates/occurframe-runner", version = "0.1.0-rc1" }
+occurframe-wire = { path = "crates/occurframe-wire", version = "0.1.0-rc1" }
 serde = { version = "1.0.219", features = ["derive"] }
 serde_json = "1.0.140"
 sha2 = "0.10.9"
 thiserror = "2.0.12"
 walkdir = "2.5.0"
+
+# NOTE ON RELEASE PATH HYGIENE
+# Released binaries must not carry the absolute paths of the machine that built
+# them: without remapping, panic/backtrace location strings embed the builder's
+# CARGO_HOME (for example `/home/runner/.cargo/registry/src/...` on hosted CI).
+# Cargo's `[profile.release] trim-paths` is still unstable on the pinned
+# toolchain, so the release workflow sets CARGO_ENCODED_RUSTFLAGS with
+# `--remap-path-prefix` for CARGO_HOME and the checkout, and
+# `cargo run -p xtask -- audit-paths` fails the build if any absolute
+# developer/CI path survives into a packaged artifact.
 
 [workspace.lints.rust]
 unsafe_code = "forbid"
