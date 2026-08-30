@@ -83,7 +83,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: occurframe-rc2-certification-eeeb7fb822888cdba2e0e09a9c692bed8ca024b0
-          path: dist/certification/rc2
+          path: dist/certification
           github-token: ${{ secrets.GITHUB_TOKEN }}
           run-id: 33323736242
       - name: Restore executable bits for Unix binaries
