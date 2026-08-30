@@ -295,10 +295,14 @@ fn classify_comparison(
         OutcomeKind::Occurrences | OutcomeKind::Accepted | OutcomeKind::Rejection
     );
 
-    if legacy_status == "unsupported_op" && current_kind == OutcomeKind::Unsupported {
+    if matches!(legacy_status, "unsupported_op" | "unsupported")
+        && current_kind == OutcomeKind::Unsupported
+    {
         return (
             ReconciliationCategory::ProtocolRefinement,
-            "RC1 unsupported_op is represented by protocol-v2 unsupported without treating it as semantic disagreement".into(),
+            format!(
+                "RC1 {legacy_status} is represented by protocol-v2 unsupported without treating it as semantic disagreement"
+            ),
             false,
         );
     }
