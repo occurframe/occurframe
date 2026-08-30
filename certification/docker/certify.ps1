@@ -43,6 +43,10 @@ $LogRoot    = Join-Path $OutRoot 'logs'
 New-Item -ItemType Directory -Force -Path $OutRoot, $LogRoot | Out-Null
 
 $LogFile = Join-Path $LogRoot 'last-run.log'
+$ToolingSha = (& git -C $RepoRoot rev-parse HEAD).Trim()
+if ($LASTEXITCODE -ne 0 -or $ToolingSha -notmatch '^[0-9a-f]{40}$') {
+    throw 'Unable to resolve the exact tooling checkout SHA.'
+}
 
 function Write-Log {
     param([string]$Message)
@@ -119,6 +123,7 @@ $runArgs = @(
     '--env', "OCCURFRAME_IMAGE_REFERENCE=$Tag",
     '--env', "OCCURFRAME_IMAGE_DIGEST=$imageId",
     '--env', "OCCURFRAME_BASE_IMAGE_DIGEST=$baseDigest",
+    '--env', "OCCURFRAME_TOOLING_SHA=$ToolingSha",
     $Tag
 )
 
