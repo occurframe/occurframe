@@ -20,6 +20,11 @@
     "vectors": 184,
     "version": "1.0.0-rc2"
   },
+  "evidence_archive": {
+    "extracts_to": "rc2",
+    "path": "certification/rc2-evidence.tar.gz",
+    "sha256": "85857aa1bafa3a0ff32ef01091b3ce23c035280de78a1333e5b42665c02ee490"
+  },
   "platform_binaries": [
     "occurframe-aarch64-apple-darwin",
     "occurframe-x86_64-apple-darwin",

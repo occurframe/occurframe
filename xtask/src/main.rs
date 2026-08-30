@@ -244,6 +244,14 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                 .into());
             }
         }
+        "verify-evidence-archive" => {
+            let report = verify_evidence_archive(
+                &options.required("root")?,
+                &options.required("lock")?,
+                options.values.get("extracted").and_then(|v| v.first()),
+            )?;
+            print_json(&report)?;
+        }
         "release-attest" => {
             let attestation = release_attestation(
                 &options.required("bundle")?,
@@ -270,8 +278,24 @@ struct ReleaseEvidenceLock {
     tool_version: String,
     corpus: ReleaseCorpusLock,
     certification: ReleaseCertificationLock,
+    evidence_archive: ReleaseEvidenceArchiveLock,
     platform_binaries: Vec<String>,
     provenance_blocked_builds: Vec<String>,
+}
+
+/// The durable, in-repository copy of the certified RC2 evidence.
+///
+/// Release assembly must not depend on a CI artifact: hosted artifacts expire,
+/// and once one does, the release can never be reassembled from its own inputs.
+/// The evidence therefore lives in the repository, and its digest lives in the
+/// immutable lock, so a future assembly restores exactly the bytes that were
+/// certified or fails loudly.
+#[derive(Debug, serde::Deserialize)]
+#[serde(deny_unknown_fields)]
+struct ReleaseEvidenceArchiveLock {
+    path: String,
+    sha256: String,
+    extracts_to: String,
 }
 
 #[derive(Debug, serde::Deserialize)]
@@ -362,6 +386,61 @@ fn copy_tree(
 /// The digest of an archive cannot live inside the archive it describes, so the
 /// bundle digest and the transport-archive digest are recorded beside the
 /// release rather than within it.
+/// Result of checking the durable evidence archive against the immutable lock.
+#[derive(Debug, serde::Serialize)]
+struct EvidenceArchiveReport {
+    archive: String,
+    sha256: String,
+    bytes: u64,
+    extracts_to: String,
+    /// Present once an extracted directory has also been checksum-verified.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    extracted_checksums_valid: Option<bool>,
+}
+
+/// Verify the in-repository certified evidence against `release/evidence-lock.json`.
+///
+/// This is what replaces a dependency on an expiring CI artifact. The archive is
+/// checked by digest before anything is unpacked, and — when an already-extracted
+/// directory is supplied — every file inside it is re-verified against the
+/// certification bundle's own `SHA256SUMS`.
+fn verify_evidence_archive(
+    repository_root: &Path,
+    lock_path: &Path,
+    extracted: Option<&PathBuf>,
+) -> Result<EvidenceArchiveReport, Box<dyn std::error::Error>> {
+    let lock: ReleaseEvidenceLock = serde_json::from_slice(&fs::read(lock_path)?)?;
+    let archive_path = repository_root.join(&lock.evidence_archive.path);
+    let bytes = fs::read(&archive_path).map_err(|error| {
+        format!(
+            "durable certification evidence is missing at {}: {error}",
+            archive_path.display()
+        )
+    })?;
+    let digest = sha256_hex(&bytes);
+    if digest != lock.evidence_archive.sha256 {
+        return Err(format!(
+            "certification evidence archive digest mismatch: lock {}, found {digest}",
+            lock.evidence_archive.sha256
+        )
+        .into());
+    }
+    let extracted_checksums_valid = match extracted {
+        Some(directory) => {
+            verify_bundle_checksums(directory)?;
+            Some(true)
+        }
+        None => None,
+    };
+    Ok(EvidenceArchiveReport {
+        archive: lock.evidence_archive.path,
+        sha256: digest,
+        bytes: bytes.len() as u64,
+        extracts_to: lock.evidence_archive.extracts_to,
+        extracted_checksums_valid,
+    })
+}
+
 /// Human-readable licensing map for the bundle root.
 fn render_licenses(licensing: &release::Licensing, third_party_count: usize) -> String {
     format!(

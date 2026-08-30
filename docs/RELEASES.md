@@ -61,8 +61,30 @@ recording the bundle checksum digest and the archive's SHA-256.
 
 ## Locked evidence
 
-`release/evidence-lock.json` pins the corpus and certification digests plus the
-exact required binary inventory. `xtask release-package` refuses to produce a
+The certified RC2 differential evidence is republished by every release, never
+re-measured at release time. It is stored **in this repository** as
+`certification/rc2-evidence.tar.gz` (a deterministic, `gzip -n` archive of the
+certified bundle), not fetched from a hosted CI artifact. Hosted artifacts
+expire; once one does, a release can no longer be reassembled from its own
+inputs, and the evidence behind a published claim becomes unreachable.
+
+The archive's SHA-256 is pinned in `release/evidence-lock.json` under
+`evidence_archive`, so restoring it is digest-verified in three steps:
+
+```text
+cargo run -p xtask -- verify-evidence-archive --root . --lock release/evidence-lock.json
+tar -xzf certification/rc2-evidence.tar.gz -C dist/certification
+cargo run -p xtask -- verify-evidence-archive --root . --lock release/evidence-lock.json --extracted dist/certification/rc2
+```
+
+The first call refuses a modified archive before anything is unpacked; the third
+re-verifies every extracted file against the certification bundle's own
+`SHA256SUMS`. `certification.artifact_name` in the lock remains as provenance —
+it records which certification run produced the evidence — and is no longer a
+fetch location.
+
+`release/evidence-lock.json` pins the corpus and certification digests, the
+evidence-archive digest, plus the exact required binary inventory. `xtask release-package` refuses to produce a
 bundle when a required binary is missing, the corpus differs from the lock, the
 certified matrix differs, a certification checksum fails, or the output directory
 already exists.

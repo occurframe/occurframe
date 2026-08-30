@@ -134,14 +134,21 @@ jobs:
           path: dist/platform-binaries
           merge-multiple: true
 
-      # The certified RC2 evidence is republished, never re-measured here.
-      - name: Download locked RC2 certification evidence
-        uses: actions/download-artifact@v4
-        with:
-          name: occurframe-rc2-certification-eeeb7fb822888cdba2e0e09a9c692bed8ca024b0
-          path: dist/certification
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          run-id: 33323736242
+      # The certified RC2 evidence is republished, never re-measured here, and it
+      # is restored from the repository rather than from a hosted CI artifact.
+      # Hosted artifacts expire; once one does, a release can no longer be
+      # reassembled from its own inputs. The archive's digest is pinned in the
+      # immutable evidence lock, and every file inside is then re-verified
+      # against the certification bundle's own SHA256SUMS.
+      - name: Restore locked RC2 certification evidence
+        run: |
+          cargo run --locked -p xtask -- verify-evidence-archive \
+            --root . --lock release/evidence-lock.json
+          mkdir -p dist/certification
+          tar -xzf certification/rc2-evidence.tar.gz -C dist/certification
+          cargo run --locked -p xtask -- verify-evidence-archive \
+            --root . --lock release/evidence-lock.json --extracted dist/certification/rc2
+          cargo run --locked -p xtask -- certification-verify --directory dist/certification/rc2
 
       - name: Restore executable bits for Unix binaries
         run: chmod +x dist/platform-binaries/occurframe-*apple-darwin dist/platform-binaries/oframe-*apple-darwin dist/platform-binaries/occurframe-*linux-gnu dist/platform-binaries/oframe-*linux-gnu

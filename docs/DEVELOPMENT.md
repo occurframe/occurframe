@@ -70,6 +70,16 @@ runtime version is part of runner identity and is enforced during `hello`.
 Dependency restoration happens during image construction; the actual
 certification container runs with `--network none`.
 
+The certified RC2 evidence lives in the repository at
+`certification/rc2-evidence.tar.gz`, with its digest pinned in the evidence lock,
+so release assembly never depends on an expiring CI artifact:
+
+```text
+cargo run -p xtask -- verify-evidence-archive --root . --lock release/evidence-lock.json
+mkdir -p dist/certification && tar -xzf certification/rc2-evidence.tar.gz -C dist/certification
+cargo run -p xtask -- verify-evidence-archive --root . --lock release/evidence-lock.json --extracted dist/certification/rc2
+```
+
 Release-candidate packaging is deterministic and refuses evidence, corpus, or binaries that differ from `release/evidence-lock.json`:
 
 ```text
