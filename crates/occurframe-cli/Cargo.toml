@@ -1,0 +1,31 @@
+[package]
+name = "occurframe-cli"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+publish = false
+
+[lib]
+name = "occurframe_cli"
+
+[[bin]]
+name = "occurframe"
+path = "src/bin/occurframe.rs"
+
+[[bin]]
+name = "oframe"
+path = "src/bin/oframe.rs"
+
+[dependencies]
+occurframe-conformance.workspace = true
+occurframe-report.workspace = true
+occurframe-runner.workspace = true
+occurframe-wire.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+
+[lints]
+workspace = true

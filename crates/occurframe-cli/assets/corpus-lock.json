@@ -1,0 +1,8 @@
+{
+  "canonical_digest": "4804772d20fb36c7329b2c5f2f28e264d9bc00b11e407e76d9836fc38cd80470",
+  "corpus_repository": "https://github.com/occurframe/corpus",
+  "corpus_sha": "f5026940fcc667b1892e99f3abe95b424931bed0",
+  "corpus_version": "1.0.0-rc2",
+  "release_digest": "8254f0dcb5e2dc0c719acbb2ec02185972f318d0bfc619ac73065b257b426477",
+  "vector_count": 184
+}

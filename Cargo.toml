@@ -5,11 +5,12 @@ members = [
     "crates/occurframe-conformance",
     "crates/occurframe-runner",
     "crates/occurframe-report",
+    "crates/occurframe-cli",
     "xtask",
 ]
 
 [workspace.package]
-version = "0.1.0"
+version = "0.1.0-rc1"
 edition = "2024"
 license = "Apache-2.0 OR MIT"
 repository = "https://github.com/occurframe/occurframe"
@@ -19,6 +20,7 @@ rust-version = "1.85"
 hex = "0.4.3"
 jsonschema = { version = "0.33.0", default-features = false }
 occurframe-conformance = { path = "crates/occurframe-conformance" }
+occurframe-cli = { path = "crates/occurframe-cli" }
 occurframe-report = { path = "crates/occurframe-report" }
 occurframe-runner = { path = "crates/occurframe-runner" }
 occurframe-wire = { path = "crates/occurframe-wire" }

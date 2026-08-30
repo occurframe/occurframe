@@ -24,7 +24,9 @@ pub use observation::{
     normalize_completed, normalize_execution_failure, semantic_observation_digest,
 };
 pub use pack::{
-    PackReport, pack_release, verify_deterministic_pack, verify_manifest, write_tree_checksums,
+    CompatibleCorpus, CorpusDistributionKind, PackReport, ReleaseFile, ReleaseManifest,
+    canonical_corpus_digest, load_compatible_corpus, pack_release, verify_deterministic_pack,
+    verify_manifest, write_tree_checksums,
 };
 pub use scoring::score;
 

@@ -483,8 +483,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "occurframe-cli"
+version = "0.1.0-rc1"
+dependencies = [
+ "occurframe-conformance",
+ "occurframe-report",
+ "occurframe-runner",
+ "occurframe-wire",
+ "serde",
+ "serde_json",
+ "thiserror",
+]
+
+[[package]]
 name = "occurframe-conformance"
-version = "0.1.0"
+version = "0.1.0-rc1"
 dependencies = [
  "hex",
  "jsonschema",
@@ -498,7 +511,7 @@ dependencies = [
 
 [[package]]
 name = "occurframe-report"
-version = "0.1.0"
+version = "0.1.0-rc1"
 dependencies = [
  "jsonschema",
  "occurframe-conformance",
@@ -511,7 +524,7 @@ dependencies = [
 
 [[package]]
 name = "occurframe-runner"
-version = "0.1.0"
+version = "0.1.0-rc1"
 dependencies = [
  "jsonschema",
  "occurframe-conformance",
@@ -524,7 +537,7 @@ dependencies = [
 
 [[package]]
 name = "occurframe-wire"
-version = "0.1.0"
+version = "0.1.0-rc1"
 dependencies = [
  "serde",
  "serde_json",
@@ -991,7 +1004,7 @@ checksum = "3ad82d2a33cdc9674dc7465672f271e096168fcdbe0f799d9e6db8c5892679dc"
 
 [[package]]
 name = "xtask"
-version = "0.1.0"
+version = "0.1.0-rc1"
 dependencies = [
  "occurframe-conformance",
  "occurframe-report",

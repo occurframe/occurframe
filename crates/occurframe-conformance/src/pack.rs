@@ -1,7 +1,7 @@
 use std::{
-    collections::BTreeMap,
+    collections::{BTreeMap, BTreeSet},
     fs,
-    path::{Path, PathBuf},
+    path::{Component, Path, PathBuf},
 };
 
 use occurframe_wire::Vector;
@@ -37,6 +37,150 @@ pub struct PackReport {
     pub vector_count: usize,
     pub canonical_corpus_digest: String,
     pub release_digest: String,
+}
+
+/// The on-disk authority representation consumed by a compatible corpus loader.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum CorpusDistributionKind {
+    /// An authored corpus checkout containing schemas, registries, and vectors.
+    AuthoredCheckout,
+    /// A generated, manifest-verified JSONL distribution.
+    PackedDistribution,
+}
+
+/// A validated corpus view suitable for public conformance execution.
+#[derive(Debug, Clone, PartialEq)]
+pub struct CompatibleCorpus {
+    pub root: PathBuf,
+    pub corpus_version: String,
+    pub canonical_corpus_digest: String,
+    pub vectors: Vec<Vector>,
+    pub distribution_kind: CorpusDistributionKind,
+}
+
+/// Load either an authored corpus checkout or its generated packed distribution.
+///
+/// Packed distributions are verified against both their SHA-256 manifest and the
+/// canonical digest of their parsed vectors. A product may additionally pin that
+/// digest to a specific corpus release.
+pub fn load_compatible_corpus(root: &Path) -> Result<CompatibleCorpus> {
+    if root.join("vectors").is_dir() {
+        let (corpus, _) = load_and_validate_corpus(root)?;
+        let canonical_corpus_digest = canonical_corpus_digest(&corpus.vectors)?;
+        let corpus_version = corpus.vectors.first().map_or_else(
+            || "1.0.0-rc2".to_owned(),
+            |vector| vector.corpus_version.clone(),
+        );
+        return Ok(CompatibleCorpus {
+            root: root.to_path_buf(),
+            corpus_version,
+            canonical_corpus_digest,
+            vectors: corpus.vectors,
+            distribution_kind: CorpusDistributionKind::AuthoredCheckout,
+        });
+    }
+    load_packed_corpus(root)
+}
+
+/// Compute the canonical semantic digest used by generated corpus manifests.
+pub fn canonical_corpus_digest(vectors: &[Vector]) -> Result<String> {
+    let mut sorted = vectors.to_vec();
+    sorted.sort_by(|left, right| left.id.cmp(&right.id));
+    let mut corpus_bytes = Vec::new();
+    for vector in &sorted {
+        corpus_bytes.extend(canonical_json_line(vector)?);
+    }
+    Ok(sha256_hex(&corpus_bytes))
+}
+
+fn load_packed_corpus(root: &Path) -> Result<CompatibleCorpus> {
+    verify_manifest(root)?;
+    let manifest: ReleaseManifest = serde_json::from_slice(&fs::read(root.join("manifest.json"))?)?;
+    if manifest.schema_version != "1.0.0" {
+        return Err(Error::Validation(format!(
+            "unsupported corpus manifest schema {}",
+            manifest.schema_version
+        )));
+    }
+    let mut paths = BTreeSet::new();
+    let mut ids = BTreeSet::new();
+    let mut vectors = Vec::new();
+    for entry in &manifest.files {
+        validate_release_path(&entry.path)?;
+        if !paths.insert(entry.path.clone()) {
+            return Err(Error::Validation(format!(
+                "duplicate release file {}",
+                entry.path
+            )));
+        }
+        let bytes = fs::read(root.join(&entry.path))?;
+        let text = std::str::from_utf8(&bytes)
+            .map_err(|error| Error::Validation(format!("{} is not UTF-8: {error}", entry.path)))?;
+        let mut records = 0_usize;
+        for (index, line) in text.lines().enumerate() {
+            if line.is_empty() {
+                continue;
+            }
+            let vector: Vector = serde_json::from_str(line).map_err(|error| {
+                Error::Validation(format!(
+                    "{} record {} is not a vector: {error}",
+                    entry.path,
+                    index + 1
+                ))
+            })?;
+            if vector.corpus_version != manifest.corpus_version {
+                return Err(Error::Validation(format!(
+                    "{} has corpus version {}, expected {}",
+                    vector.id, vector.corpus_version, manifest.corpus_version
+                )));
+            }
+            if !ids.insert(vector.id.clone()) {
+                return Err(Error::Validation(format!(
+                    "duplicate packed vector ID {}",
+                    vector.id
+                )));
+            }
+            records += 1;
+            vectors.push(vector);
+        }
+        if records != entry.records {
+            return Err(Error::Validation(format!(
+                "record count mismatch for {}: manifest {}, observed {records}",
+                entry.path, entry.records
+            )));
+        }
+    }
+    vectors.sort_by(|left, right| left.id.cmp(&right.id));
+    let observed_digest = canonical_corpus_digest(&vectors)?;
+    if observed_digest != manifest.canonical_corpus_digest {
+        return Err(Error::Validation(format!(
+            "canonical corpus digest mismatch: manifest {}, observed {observed_digest}",
+            manifest.canonical_corpus_digest
+        )));
+    }
+    Ok(CompatibleCorpus {
+        root: root.to_path_buf(),
+        corpus_version: manifest.corpus_version,
+        canonical_corpus_digest: observed_digest,
+        vectors,
+        distribution_kind: CorpusDistributionKind::PackedDistribution,
+    })
+}
+
+fn validate_release_path(path: &str) -> Result<()> {
+    let path = Path::new(path);
+    if path.extension().and_then(std::ffi::OsStr::to_str) != Some("jsonl")
+        || path
+            .components()
+            .any(|component| !matches!(component, Component::Normal(_)))
+    {
+        return Err(Error::Validation(format!(
+            "unsafe or non-JSONL manifest path {}",
+            path.display()
+        )));
+    }
+    Ok(())
 }
 
 /// Generate a deterministic RC2 distribution directory.
@@ -205,6 +349,8 @@ fn render_sums(output_directory: &Path, manifest: &ReleaseManifest) -> Result<Ve
 
 #[cfg(test)]
 mod tests {
+    use std::sync::atomic::{AtomicUsize, Ordering};
+
     use occurframe_wire::{Classification, Expectation, Lifecycle};
     use serde_json::json;
 
@@ -267,5 +413,37 @@ mod tests {
             render_release(&vectors).expect("first"),
             render_release(&vectors).expect("second")
         );
+    }
+
+    #[test]
+    fn packed_distribution_is_manifest_verified_and_loadable() {
+        static NEXT: AtomicUsize = AtomicUsize::new(0);
+        let directory = std::env::temp_dir().join(format!(
+            "occurframe-pack-test-{}-{}",
+            std::process::id(),
+            NEXT.fetch_add(1, Ordering::Relaxed)
+        ));
+        fs::create_dir_all(&directory).expect("fixture directory");
+        let rendered =
+            render_release(&[vector("B", vec!["later", "earlier"]), vector("A", vec![])])
+                .expect("render");
+        for (path, bytes) in rendered.files {
+            fs::write(directory.join(path), bytes).expect("write fixture");
+        }
+        let loaded = load_compatible_corpus(&directory).expect("load packed corpus");
+        assert_eq!(
+            loaded.distribution_kind,
+            CorpusDistributionKind::PackedDistribution
+        );
+        assert_eq!(loaded.vectors.len(), 2);
+        assert_eq!(loaded.vectors[0].id, "A");
+        assert_eq!(
+            loaded.vectors[1].expectation,
+            Expectation::Single {
+                occurrences: vec!["later".into(), "earlier".into()],
+                note: None
+            }
+        );
+        fs::remove_dir_all(&directory).expect("remove isolated fixture directory");
     }
 }
