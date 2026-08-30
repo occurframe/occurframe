@@ -10,7 +10,7 @@ source tree on the machine.
 Run it against a directory or a `.tar.gz`:
 
     python3 tests/clean-room/verify_release.py \\
-        --bundle dist/release/occurframe-0.1.0-rc1 \\
+        --bundle dist/release/occurframe-0.1.0-rc2 \\
         --target x86_64-unknown-linux-gnu
 
 Exit status is 0 when every check passes and 1 otherwise; every check reports
@@ -36,8 +36,13 @@ CORPUS_CANONICAL_DIGEST = (
     "4804772d20fb36c7329b2c5f2f28e264d9bc00b11e407e76d9836fc38cd80470"
 )
 CORPUS_VECTORS = 184
-TOOL_VERSION = "0.1.0-rc1"
+TOOL_VERSION = "0.1.0-rc2"
+SPECIFICATION_VERSION = "1.0.0-rc1"
 RUNNER_PROTOCOL_VERSION = "2.0"
+# ERRATA-001: v1 ships one semantic command. These three require a recurrence
+# evaluator the ORACLE ONLY verdict does not authorise, so they must behave as
+# any other unknown word rather than as recognized-but-unavailable commands.
+DEFERRED_COMMANDS = ["classify", "explain", "occurrences"]
 EXAMPLE_ENGINE = "example.minimal"
 EXAMPLE_FAMILIES = ["cron.anchoring", "cron.invalid"]
 # The example fixture answers two vectors and reports everything else as
@@ -197,6 +202,21 @@ def verify_manifest(root: Path, target: str) -> None:
     check("manifest records the Rust toolchain", bool(toolchain.get("rustc_version")) and bool(toolchain.get("host")), str(toolchain))
     check("manifest records this target triple", target in manifest.get("target_triples", []), str(manifest.get("target_triples")))
     check("manifest records the runner protocol version", manifest["runner_protocol_version"] == RUNNER_PROTOCOL_VERSION)
+    check(
+        "manifest records the specification version",
+        manifest.get("specification_version") == SPECIFICATION_VERSION,
+        str(manifest.get("specification_version")),
+    )
+    check(
+        "manifest records the errata fixing the command doctrine",
+        "ERRATA-001" in manifest.get("specification_errata", []),
+        str(manifest.get("specification_errata")),
+    )
+    check(
+        "manifest declares exactly one shipped semantic command",
+        manifest.get("shipped_commands") == ["test"],
+        str(manifest.get("shipped_commands")),
+    )
 
     corpus = manifest.get("corpus", {})
     check("manifest records the corpus version", corpus.get("version") == CORPUS_VERSION)
@@ -346,6 +366,11 @@ def main() -> int:
         print("\n[1] release layout")
         for entry in REQUIRED_ENTRIES:
             check(f"release contains {entry}", (root / entry).exists())
+        check(
+            "VERSION names the specification",
+            f"Specification:      {SPECIFICATION_VERSION}"
+            in (root / "VERSION").read_text(encoding="utf-8"),
+        )
 
         print("\n[2] packaged integrity")
         verify_checksums(root)
@@ -383,6 +408,47 @@ def main() -> int:
         check("occurframe --help succeeds", long_help.returncode == 0)
         check("oframe --help succeeds", short_help.returncode == 0)
         check("aliases print identical help", long_help.stdout == short_help.stdout)
+        check(
+            "version reports the specification it scores against",
+            f"specification {SPECIFICATION_VERSION}".encode() in version.stdout,
+            version.stdout.decode(errors="replace").strip(),
+        )
+        check(
+            "version reports the bundled corpus",
+            f"corpus {CORPUS_VERSION}".encode() in version.stdout,
+        )
+
+        # ERRATA-001: exactly one semantic command ships, and the deferred ones
+        # are neither implemented nor advertised.
+        help_text = long_help.stdout.decode(errors="replace")
+        check(
+            "help advertises exactly one semantic command",
+            "occurframe test --engine" in help_text
+            and not any(command in help_text for command in DEFERRED_COMMANDS),
+            help_text,
+        )
+        check(
+            "help claims no recurrence engine",
+            "computes no occurrence" in help_text and "not a scheduling engine" in help_text,
+        )
+        baseline = run(occurframe, ["definitely-not-a-command"], neutral_cwd)
+        check("an unknown command is a usage error (exit 3)", baseline.returncode == 3, str(baseline.returncode))
+        for command in DEFERRED_COMMANDS:
+            deferred = run(occurframe, [command], neutral_cwd)
+            short_deferred = run(oframe, [command], neutral_cwd)
+            check(
+                f"deferred command '{command}' is an ordinary usage error",
+                deferred.returncode == baseline.returncode
+                and f"unknown command '{command}'".encode() in deferred.stderr
+                and b"reserved" not in deferred.stderr,
+                deferred.stderr.decode(errors="replace")[:200],
+            )
+            check(
+                f"aliases agree on deferred command '{command}'",
+                deferred.stdout == short_deferred.stdout
+                and deferred.stderr == short_deferred.stderr
+                and deferred.returncode == short_deferred.returncode,
+            )
 
         print("\n[6] external protocol-v2 runner")
         example_directory = root / "examples" / "minimal-runner"
@@ -427,6 +493,11 @@ def main() -> int:
         print("\n[8] result content")
         report = json.loads(outputs[("occurframe", "json")].stdout.decode("utf-8"))
         check("JSON reports the tooling version", report["tooling_version"] == TOOL_VERSION)
+        check(
+            "JSON reports the specification version",
+            report.get("specification_version") == SPECIFICATION_VERSION,
+            str(report.get("specification_version")),
+        )
         check("JSON reports runner protocol " + RUNNER_PROTOCOL_VERSION, report["runner_protocol_version"] == RUNNER_PROTOCOL_VERSION)
         check("JSON reports the certified corpus digest", report["corpus"]["canonical_digest"] == CORPUS_CANONICAL_DIGEST)
         check("JSON records engine identity", report["engine"]["build_id"] == EXAMPLE_ENGINE)
@@ -439,6 +510,10 @@ def main() -> int:
 
         text = outputs[("occurframe", "text")].stdout.decode("utf-8")
         check("text output states the corpus digest", CORPUS_CANONICAL_DIGEST in text)
+        check(
+            "text output states the specification version",
+            f"specification: {SPECIFICATION_VERSION}" in text,
+        )
         check("text output separates unsupported from disagreement", "unsupported:" in text and "non-conformant:" in text)
 
         junit = ElementTree.fromstring(outputs[("occurframe", "junit")].stdout.decode("utf-8"))
