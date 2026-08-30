@@ -4,6 +4,7 @@ members = [
     "crates/occurframe-wire",
     "crates/occurframe-conformance",
     "crates/occurframe-runner",
+    "crates/occurframe-report",
     "xtask",
 ]
 
@@ -18,6 +19,7 @@ rust-version = "1.85"
 hex = "0.4.3"
 jsonschema = { version = "0.33.0", default-features = false }
 occurframe-conformance = { path = "crates/occurframe-conformance" }
+occurframe-report = { path = "crates/occurframe-report" }
 occurframe-runner = { path = "crates/occurframe-runner" }
 occurframe-wire = { path = "crates/occurframe-wire" }
 serde = { version = "1.0.219", features = ["derive"] }

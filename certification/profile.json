@@ -1,0 +1,213 @@
+{
+  "schema_version": "1.0.0",
+  "certification_profile_version": "rc2.1",
+  "certification_id": "occurframe-rc2-differential-certification",
+  "status": "candidate_evidence_base_for_v1",
+  "release_posture": {
+    "publishes_stable_release": false,
+    "note": "RC2 measurements are the candidate evidence base for Occurframe v1. They are evidence, not normative authority, and no stable release is cut from this profile."
+  },
+  "corpus": {
+    "repository": "https://github.com/occurframe/corpus",
+    "branch": "dev",
+    "sha": "f5026940fcc667b1892e99f3abe95b424931bed0",
+    "corpus_version": "1.0.0-rc2",
+    "authority": "read_only_normative",
+    "vector_count": 184,
+    "note": "Corpus vectors and specification are the normative authority. Observations never amend expectations."
+  },
+  "tooling": {
+    "repository": "https://github.com/occurframe/occurframe",
+    "branch": "dev",
+    "baseline_sha": "a59b1b328e466077b3c5c32fec1e6a3121621d21",
+    "intended_source_policy": "certification-manifest tooling_source_sha must equal the exact checkout HEAD executed by the workflow",
+    "note": "baseline_sha is the revision this profile was authored against. The certification manifest records the source revision actually executed; a divergence is reported, never silently accepted."
+  },
+  "runner_protocol_version": "2.0",
+  "runner_versions": {
+    "occurframe-go-runner": "2.0.0",
+    "occurframe-javascript-runner": "2.0.0",
+    "occurframe-php-runner": "2.0.0",
+    "occurframe-python-runner": "2.0.0",
+    "occurframe-ruby-runner": "2.0.0"
+  },
+  "engine_configuration_set": {
+    "registry": "runners/registry/runner-builds.json",
+    "configured_builds": 25,
+    "reproducible_builds": [
+      "go.robfig-cron",
+      "go.robfig-cron-seconds",
+      "go.rrule-go",
+      "javascript.cron-parser",
+      "javascript.cron-parser-strict",
+      "javascript.croner",
+      "javascript.croner-legacyMode-false",
+      "javascript.cronstrue",
+      "javascript.rrule-js",
+      "php.php-cron-expression",
+      "php.php-rrule",
+      "python.aps.system",
+      "python.aps.vendored",
+      "python.croniter.system",
+      "python.croniter.vendored",
+      "python.croniterAnd.system",
+      "python.croniterAnd.vendored",
+      "python.cronsim.system",
+      "python.cronsim.vendored",
+      "python.dateutil.system",
+      "python.dateutil.vendored",
+      "python.pandas.system",
+      "python.pandas.vendored"
+    ],
+    "unreproducible_builds": [
+      {
+        "build_id": "ruby.fugit",
+        "status": "unreproducible_provenance",
+        "reason": "Phase II provenance did not record the concurrent-ruby commit required by tzinfo; no substitute version is permitted"
+      },
+      {
+        "build_id": "ruby.ice_cube",
+        "status": "unreproducible_provenance",
+        "reason": "Phase II provenance did not record the concurrent-ruby commit required by tzinfo; no substitute version is permitted"
+      }
+    ],
+    "note": "A build may only be absent from the observation set if it is declared unreproducible here before execution."
+  },
+  "execution": {
+    "official_engine_timeout_ms": 8000,
+    "infrastructure_watchdog_ms": 30000,
+    "one_terminal_observation_per_build_vector": true,
+    "vector_prefiltering": "forbidden",
+    "missing_capability_representation": "explicit unsupported observation"
+  },
+  "canonical_platform": {
+    "identity": "Ubuntu 24.04 x86_64",
+    "base_image": "ubuntu:24.04@sha256:33ceb71981b602c1a7443a53469e4dba065f7503eab3078a2d7a57a2ab987517",
+    "execution_model": "local Docker container",
+    "image_definition": "certification/docker/Dockerfile",
+    "host_role": "host only; the host operating system is never the measurement environment",
+    "offline_execution_required": true,
+    "pinned_runtimes": {
+      "Go": {
+        "runtime_name": "gc",
+        "pinned_version": "go1.24.7"
+      },
+      "JavaScript": {
+        "runtime_name": "Bun",
+        "pinned_version": "1.3.13"
+      },
+      "PHP": {
+        "runtime_name": "PHP",
+        "pinned_version": "8.4.21"
+      },
+      "Python": {
+        "runtime_name": "CPython",
+        "pinned_version": "3.11.15"
+      },
+      "Ruby": {
+        "runtime_name": "MRI",
+        "pinned_version": "3.3.6"
+      }
+    },
+    "pinned_orchestration_toolchain": {
+      "rustc": "1.95.0"
+    },
+    "pinned_tzdb": {
+      "system_zoneinfo_release": "2026a",
+      "dataform": "rearguard",
+      "acquisition": "built from the IANA release tarball, not from a rolling distribution package"
+    },
+    "guarantee_limits": "Naming Ubuntu 24.04 does not guarantee an identical future tzdb or runtime state. The observed environment is captured at runtime and is part of the evidence."
+  },
+  "required_provenance_fields": {
+    "observation": [
+      "corpus_version",
+      "vector_id",
+      "runner.name",
+      "runner.version",
+      "engine.name",
+      "engine.version",
+      "engine.provenance",
+      "runtime.language",
+      "runtime.runtime",
+      "runtime.version",
+      "dialect_ids",
+      "semantic_profile_claims",
+      "tzdb_provenance",
+      "execution_status",
+      "warnings"
+    ],
+    "environment": [
+      "container.image_reference",
+      "container.image_digest",
+      "observed.os",
+      "observed.architecture",
+      "runtimes[].observed_version",
+      "runtimes[].configured_requirement",
+      "tzdb_provenance_sources",
+      "engine_dependencies"
+    ],
+    "enforcement": {
+      "runtime_version": "observed runtime version must equal the configured pinned version; a mismatch is a runner identity failure, not a recorded note",
+      "engine_provenance": "runner and engine provenance must be pinned for every configured build",
+      "tzdb_release_kind": "observed release kind must be one of the kinds the build configures"
+    }
+  },
+  "determinism": {
+    "runs_required": 2,
+    "comparison": "byte equality of semantic artifacts and equality of their SHA-256 digests",
+    "semantic_artifacts": [
+      "observations.ndjson",
+      "conformance-results.ndjson",
+      "matrix.json",
+      "matrix.csv",
+      "differential-report.md",
+      "reconciliation.json",
+      "reconciliation.md"
+    ],
+    "excluded_from_comparison": [
+      "certification-manifest.json",
+      "environment.json",
+      "SHA256SUMS"
+    ],
+    "occurrence_ordering": "native order preserved; sorting occurrences to obtain stability is forbidden"
+  },
+  "reconciliation": {
+    "legacy_evidence_root": "legacy/phase2-rc1/",
+    "legacy_status": "historical evidence only",
+    "known_ambiguous_legacy_cells": 814,
+    "phase_two_headline": "157/184",
+    "headline_is_an_acceptance_target": false,
+    "categories": [
+      "exact_match",
+      "protocol_refinement",
+      "tzdb_provenance_change",
+      "runtime_environment_change",
+      "adapter_correction",
+      "fresh_engine_behavior_difference",
+      "legacy_ambiguous_error",
+      "unresolved_difference"
+    ]
+  },
+  "artifact_policy": {
+    "bundle_root": "dist/certification/rc2/",
+    "version_controlled": [
+      "certification profile",
+      "image definition",
+      "report generation implementation",
+      "reconciliation implementation",
+      "schemas and types",
+      "small golden fixtures",
+      "documentation"
+    ],
+    "not_version_controlled": [
+      "observations.ndjson",
+      "conformance-results.ndjson",
+      "matrix.json",
+      "matrix.csv",
+      "generated reports",
+      "SHA256SUMS"
+    ],
+    "distribution": "CI artifact upload"
+  }
+}

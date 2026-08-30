@@ -1,0 +1,67 @@
+{
+  "schema_version": "1.0.0",
+  "mappings": [
+    {"build_id":"go.robfig-cron","legacy_engine_key":"robfig-cron@tz2026a","identity_confidence":"exact","legacy_runtime_version":"go1.24.7","legacy_tzdb":{"release_kind":"exact","release":"2026a"}},
+    {"build_id":"go.robfig-cron-seconds","legacy_engine_key":"robfig-cron[seconds]@tz2026a","identity_confidence":"exact","legacy_runtime_version":"go1.24.7","legacy_tzdb":{"release_kind":"exact","release":"2026a"}},
+    {"build_id":"go.rrule-go","legacy_engine_key":"rrule-go@tz2026a","identity_confidence":"exact","legacy_runtime_version":"go1.24.7","legacy_tzdb":{"release_kind":"exact","release":"2026a"}},
+    {"build_id":"javascript.cron-parser","legacy_engine_key":"cron-parser@tzle2026a","identity_confidence":"exact","legacy_runtime_version":"1.3.13","legacy_tzdb":{"release_kind":"bounded","max_inclusive":"2026a"}},
+    {"build_id":"javascript.cron-parser-strict","legacy_engine_key":"cron-parser[strict]@tzle2026a","identity_confidence":"exact","legacy_runtime_version":"1.3.13","legacy_tzdb":{"release_kind":"bounded","max_inclusive":"2026a"}},
+    {"build_id":"javascript.croner","legacy_engine_key":"croner@tzle2026a","identity_confidence":"exact","legacy_runtime_version":"1.3.13","legacy_tzdb":{"release_kind":"bounded","max_inclusive":"2026a"}},
+    {"build_id":"javascript.croner-legacyMode-false","legacy_engine_key":"croner[legacyMode=false]@tzle2026a","identity_confidence":"exact","legacy_runtime_version":"1.3.13","legacy_tzdb":{"release_kind":"bounded","max_inclusive":"2026a"}},
+    {"build_id":"javascript.cronstrue","legacy_engine_key":"cronstrue@tzle2026a","identity_confidence":"exact","legacy_runtime_version":"1.3.13","legacy_tzdb":{"release_kind":"bounded","max_inclusive":"2026a"}},
+    {"build_id":"javascript.rrule-js","legacy_engine_key":"rrule.js@tzle2026a","identity_confidence":"exact","legacy_runtime_version":"1.3.13","legacy_tzdb":{"release_kind":"bounded","max_inclusive":"2026a"}},
+    {"build_id":"php.php-cron-expression","legacy_engine_key":"php-cron-expression@tz2026a","identity_confidence":"exact","legacy_runtime_version":"8.4.21","legacy_tzdb":{"release_kind":"exact","release":"2026a"}},
+    {"build_id":"php.php-rrule","legacy_engine_key":"php-rrule@tz2026a","identity_confidence":"exact","legacy_runtime_version":"8.4.21","legacy_tzdb":{"release_kind":"exact","release":"2026a"}},
+    {"build_id":"python.aps.system","legacy_engine_key":"apscheduler3@tz2026a","identity_confidence":"exact","legacy_runtime_version":"3.11.15","legacy_tzdb":{"release_kind":"exact","release":"2026a"}},
+    {"build_id":"python.aps.vendored","legacy_engine_key":"apscheduler3@tz2026c","identity_confidence":"exact","legacy_runtime_version":"3.11.15","legacy_tzdb":{"release_kind":"exact","release":"2026c"}},
+    {"build_id":"python.croniter.system","legacy_engine_key":"croniter@tz2026a","identity_confidence":"exact","legacy_runtime_version":"3.11.15","legacy_tzdb":{"release_kind":"exact","release":"2026a"}},
+    {"build_id":"python.croniter.vendored","legacy_engine_key":"croniter@tz2026c","identity_confidence":"exact","legacy_runtime_version":"3.11.15","legacy_tzdb":{"release_kind":"exact","release":"2026c"}},
+    {"build_id":"python.croniterAnd.system","legacy_engine_key":"croniter[day_or=False]@tz2026a","identity_confidence":"exact","legacy_runtime_version":"3.11.15","legacy_tzdb":{"release_kind":"exact","release":"2026a"}},
+    {"build_id":"python.croniterAnd.vendored","legacy_engine_key":"croniter[day_or=False]@tz2026c","identity_confidence":"exact","legacy_runtime_version":"3.11.15","legacy_tzdb":{"release_kind":"exact","release":"2026c"}},
+    {"build_id":"python.cronsim.system","legacy_engine_key":"cronsim@tz2026a","identity_confidence":"exact","legacy_runtime_version":"3.11.15","legacy_tzdb":{"release_kind":"exact","release":"2026a"}},
+    {"build_id":"python.cronsim.vendored","legacy_engine_key":"cronsim@tz2026c","identity_confidence":"exact","legacy_runtime_version":"3.11.15","legacy_tzdb":{"release_kind":"exact","release":"2026c"}},
+    {"build_id":"python.dateutil.system","legacy_engine_key":"python-dateutil@tz2026a","identity_confidence":"exact","legacy_runtime_version":"3.11.15","legacy_tzdb":{"release_kind":"exact","release":"2026a"}},
+    {"build_id":"python.dateutil.vendored","legacy_engine_key":"python-dateutil@tz2026c","identity_confidence":"exact","legacy_runtime_version":"3.11.15","legacy_tzdb":{"release_kind":"exact","release":"2026c"}},
+    {"build_id":"python.pandas.system","legacy_engine_key":"pandas@tz2026a","identity_confidence":"exact","legacy_runtime_version":"3.11.15","legacy_tzdb":{"release_kind":"exact","release":"2026a"}},
+    {"build_id":"python.pandas.vendored","legacy_engine_key":"pandas@tz2026c","identity_confidence":"exact","legacy_runtime_version":"3.11.15","legacy_tzdb":{"release_kind":"exact","release":"2026c"}},
+    {"build_id":"ruby.fugit","legacy_engine_key":"fugit@tz2026a","identity_confidence":"exact","legacy_runtime_version":"3.3.6","legacy_tzdb":{"release_kind":"exact","release":"2026a"}},
+    {"build_id":"ruby.ice_cube","legacy_engine_key":"ice_cube@tz2026a","identity_confidence":"exact","legacy_runtime_version":"3.3.6","legacy_tzdb":{"release_kind":"exact","release":"2026a"}}
+  ],
+  "adapter_corrections": [
+    {
+      "build_ids": [
+        "go.robfig-cron",
+        "go.robfig-cron-seconds",
+        "javascript.cron-parser",
+        "javascript.cron-parser-strict",
+        "javascript.croner",
+        "javascript.croner-legacyMode-false",
+        "javascript.cronstrue",
+        "php.php-cron-expression",
+        "python.aps.system",
+        "python.aps.vendored",
+        "python.croniter.system",
+        "python.croniter.vendored",
+        "python.croniterAnd.system",
+        "python.croniterAnd.vendored",
+        "python.cronsim.system",
+        "python.cronsim.vendored",
+        "ruby.fugit"
+      ],
+      "operation": "cron.parse",
+      "evidence": "RC1 and the initial v2 adapter path generated occurrences after a successful parser call; protocol v2 now reports native parse acceptance as accepted without presenting generated occurrences as the parse result"
+    },
+    {
+      "build_ids": [
+        "go.rrule-go",
+        "javascript.rrule-js",
+        "php.php-rrule",
+        "python.dateutil.system",
+        "python.dateutil.vendored",
+        "ruby.ice_cube"
+      ],
+      "operation": "rrule.parse",
+      "evidence": "RC1 and the initial v2 adapter path expanded occurrences after a successful parser call; protocol v2 now reports native parse acceptance as accepted without presenting generated occurrences as the parse result"
+    }
+  ]
+}

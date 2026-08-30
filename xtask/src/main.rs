@@ -9,6 +9,10 @@ use occurframe_conformance::{
     load_and_validate_corpus, migrate_rc1, pack_release, verify_deterministic_pack,
     verify_manifest, verify_migration, write_tree_checksums,
 };
+use occurframe_report::{
+    BundleInput, generate_bundle, load_json, load_legacy_build_map, load_profile,
+    verify_bundle_checksums, verify_deterministic_bundles,
+};
 use occurframe_runner::{
     CaseExecution, ProtocolSchema, ReproducibilityStatus, RunnerBuild, RunnerRegistry, run_batch,
     semantic_observation_digest, semantic_observation_ndjson,
@@ -129,6 +133,62 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
             }) {
                 return Err("adapter smoke contained runner failure or timeout".into());
             }
+        }
+        "differential-certify" => {
+            let corpus_path = options.required("corpus")?;
+            let (corpus, _) = load_and_validate_corpus(&corpus_path)?;
+            let registry = RunnerRegistry::load(&options.required("registry")?)?;
+            let profile = load_profile(&options.required("profile")?)?;
+            let builds: Vec<_> = registry
+                .builds
+                .iter()
+                .filter(|build| build.reproducibility.status == ReproducibilityStatus::Reproducible)
+                .cloned()
+                .collect();
+            let schema = ProtocolSchema::load(&options.required("schema")?)?;
+            let records = run_batch(
+                &builds,
+                &corpus.vectors,
+                &options.required("root")?,
+                &schema,
+                std::time::Duration::from_millis(profile.execution.infrastructure_watchdog_ms),
+            );
+            let environment = load_json(&options.required("environment")?)?;
+            let legacy_matrix = load_json(&options.required("legacy-matrix")?)?;
+            let legacy_build_map = load_legacy_build_map(&options.required("legacy-map")?)?;
+            let observation_schema =
+                load_json(&corpus_path.join("schemas/normalized-observation.schema.json"))?;
+            let conformance_schema =
+                load_json(&corpus_path.join("schemas/conformance-result.schema.json"))?;
+            let summary = generate_bundle(
+                &BundleInput {
+                    profile: &profile,
+                    registry: &registry,
+                    corpus: &corpus,
+                    executions: &records,
+                    environment: &environment,
+                    tooling_source_sha: &options.required_string("tooling-sha")?,
+                    legacy_matrix: &legacy_matrix,
+                    legacy_build_map: &legacy_build_map,
+                    observation_schema: &observation_schema,
+                    conformance_schema: &conformance_schema,
+                },
+                &options.required("output")?,
+            )?;
+            print_json(&summary)?;
+        }
+        "differential-verify" => {
+            let profile = load_profile(&options.required("profile")?)?;
+            let result = verify_deterministic_bundles(
+                &profile,
+                &options.required("first")?,
+                &options.required("second")?,
+            )?;
+            print_json(&result)?;
+        }
+        "certification-verify" => {
+            verify_bundle_checksums(&options.required("directory")?)?;
+            print_json(&serde_json::json!({"checksums_valid": true}))?;
         }
         _ => return Err(format!("unknown command: {command}").into()),
     }

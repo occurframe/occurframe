@@ -1,0 +1,17 @@
+# Build context hygiene for the canonical certification image.
+# The image must be built from checked-in lockfiles only; host-platform
+# dependency trees are never allowed into the context.
+.git
+target
+dist
+smoke-artifacts
+research
+corpus
+runners/python/.venv
+runners/javascript/node_modules
+runners/php/.adapter-deps
+runners/ruby/.adapter-deps
+runners/go/bin
+runners/go/.gopath
+**/__pycache__
+**/*.pyc
