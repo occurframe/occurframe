@@ -248,13 +248,12 @@ jobs:
             target: x86_64-apple-darwin
     runs-on: ${{ matrix.os }}
     steps:
-      # Only the harness is checked out. No Cargo, no Rust toolchain and no
-      # corpus checkout are installed in this job: the release has to stand on
-      # its own for someone who downloaded an archive.
+      # The checkout supplies the harness and nothing else. No Rust toolchain,
+      # no Cargo and no corpus checkout are installed in this job, and the
+      # harness itself extracts the release elsewhere and runs it from an empty,
+      # unrelated working directory — so nothing here can be resolved from the
+      # repository at run time.
       - uses: actions/checkout@v4
-        with:
-          sparse-checkout: tests/clean-room
-          sparse-checkout-cone-mode: false
 
       - uses: actions/setup-python@v5
         with:
