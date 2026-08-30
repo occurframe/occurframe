@@ -211,6 +211,125 @@ fn semantic_and_infrastructure_exit_codes_are_distinct() {
     assert_eq!(usage.status.code(), Some(3));
 }
 
+/// The shipped v1 command surface, exercised through the real executables.
+///
+/// ERRATA-001 defers `explain`, `classify` and `occurrences` behind the engine
+/// gate. They must behave exactly as any other unknown word: no special
+/// recognition, no "reserved" reply, and no appearance in default help — a
+/// surface Occurframe cannot implement must not be advertised as if it could.
+#[test]
+fn both_aliases_ship_exactly_one_semantic_command() {
+    for binary in [
+        env!("CARGO_BIN_EXE_occurframe"),
+        env!("CARGO_BIN_EXE_oframe"),
+    ] {
+        let help = Command::new(binary).arg("--help").output().expect("help");
+        assert_eq!(help.status.code(), Some(0));
+        let help_text = String::from_utf8(help.stdout).expect("UTF-8");
+        assert!(help_text.contains("occurframe test --engine"));
+        for deferred in ["explain", "classify", "occurrences"] {
+            assert!(
+                !help_text.contains(deferred),
+                "{binary} advertises the engine-gated command {deferred}"
+            );
+        }
+
+        let version = Command::new(binary)
+            .arg("--version")
+            .output()
+            .expect("version");
+        assert_eq!(version.status.code(), Some(0));
+        let version_text = String::from_utf8(version.stdout).expect("UTF-8");
+        assert!(
+            version_text.starts_with("occurframe 0.1.0-rc2\n"),
+            "{version_text}"
+        );
+        assert!(version_text.contains("specification 1.0.0-rc1"));
+        assert!(version_text.contains("runner-protocol 2.0"));
+        assert!(version_text.contains("corpus 1.0.0-rc2"));
+
+        let baseline = Command::new(binary)
+            .arg("definitely-not-a-command")
+            .output()
+            .expect("unknown");
+        assert_eq!(baseline.status.code(), Some(3));
+        for deferred in ["explain", "classify", "occurrences"] {
+            let deferred_run = Command::new(binary)
+                .arg(deferred)
+                .output()
+                .expect("deferred");
+            assert_eq!(
+                deferred_run.status.code(),
+                baseline.status.code(),
+                "{deferred} must be an ordinary usage error"
+            );
+            let stderr = String::from_utf8(deferred_run.stderr).expect("UTF-8");
+            assert!(
+                stderr.contains(&format!("unknown command '{deferred}'")),
+                "{stderr}"
+            );
+            assert!(!stderr.contains("reserved"), "{stderr}");
+        }
+    }
+}
+
+#[test]
+fn aliases_agree_on_help_version_and_the_deferred_command_surface() {
+    for arguments in [
+        vec!["--help"],
+        vec!["--version"],
+        vec!["explain"],
+        vec!["classify"],
+        vec!["occurrences"],
+        vec!["definitely-not-a-command"],
+    ] {
+        let long = Command::new(env!("CARGO_BIN_EXE_occurframe"))
+            .args(&arguments)
+            .output()
+            .expect("occurframe");
+        let short = Command::new(env!("CARGO_BIN_EXE_oframe"))
+            .args(&arguments)
+            .output()
+            .expect("oframe");
+        assert_eq!(
+            long.stdout, short.stdout,
+            "stdout differs for {arguments:?}"
+        );
+        assert_eq!(
+            long.stderr, short.stderr,
+            "stderr differs for {arguments:?}"
+        );
+        assert_eq!(
+            long.status.code(),
+            short.status.code(),
+            "exit code differs for {arguments:?}"
+        );
+    }
+}
+
+/// The specification version is part of every structured result, in all formats.
+#[test]
+fn every_output_format_carries_the_specification_version() {
+    let json = invoke(env!("CARGO_BIN_EXE_occurframe"), "success", "json");
+    assert_eq!(json.status.code(), Some(0));
+    let report: serde_json::Value =
+        serde_json::from_slice(&json.stdout).expect("deterministic JSON report");
+    assert_eq!(report["specification_version"], "1.0.0-rc1");
+    assert_eq!(report["tooling_version"], "0.1.0-rc2");
+    assert_eq!(report["runner_protocol_version"], "2.0");
+    assert_eq!(report["corpus"]["version"], "1.0.0-rc2");
+
+    let junit = invoke(env!("CARGO_BIN_EXE_occurframe"), "success", "junit");
+    let junit_text = String::from_utf8(junit.stdout).expect("UTF-8");
+    assert!(
+        junit_text.contains(r#"<property name="occurframe.specification" value="1.0.0-rc1"/>"#)
+    );
+
+    let text = invoke(env!("CARGO_BIN_EXE_occurframe"), "success", "text");
+    let rendered = String::from_utf8(text.stdout).expect("UTF-8");
+    assert!(rendered.contains("specification: 1.0.0-rc1"), "{rendered}");
+}
+
 #[test]
 fn unknown_engine_family_and_tzdb_mismatch_have_exact_domains() {
     let registry = registry("success");

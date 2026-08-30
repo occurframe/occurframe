@@ -23,8 +23,8 @@ use occurframe_runner::{
 };
 use occurframe_wire::{
     Classification, ComponentIdentity, ConformanceVerdict, Diagnostic, DialectId, EngineOutcome,
-    ExecutionStatus, RUNNER_PROTOCOL_VERSION, RuntimeIdentity, SemanticValue, TzdbProvenance,
-    TzdbRelease, VerdictStatus,
+    ExecutionStatus, RUNNER_PROTOCOL_VERSION, RuntimeIdentity, SPECIFICATION_VERSION,
+    SemanticValue, TzdbProvenance, TzdbRelease, VerdictStatus,
 };
 use serde::{Deserialize, Serialize};
 
@@ -106,6 +106,10 @@ struct CorpusLock {
 struct CliReport {
     schema_version: String,
     tooling_version: String,
+    /// The behavioural specification the verdicts were scored against. It
+    /// versions independently of the tool, so a result that omitted it could not
+    /// be reproduced.
+    specification_version: String,
     runner_protocol_version: String,
     corpus: CorpusIdentity,
     engine: EngineIdentity,
@@ -177,7 +181,7 @@ fn dispatch(args: &[String], stdout_is_tty: bool) -> Result<CommandResult, CliEr
     };
     match command {
         "--help" | "-h" => Ok(success_text(top_level_help())),
-        "--version" | "-V" => Ok(success_text(format!("occurframe {TOOL_VERSION}\n"))),
+        "--version" | "-V" => Ok(success_text(version_text())),
         "test" => {
             if args
                 .get(1)
@@ -188,11 +192,14 @@ fn dispatch(args: &[String], stdout_is_tty: bool) -> Result<CommandResult, CliEr
             let options = parse_test(&args[1..])?;
             run_test(&options, stdout_is_tty)
         }
-        "explain" | "classify" | "occurrences" => Err(CliError::usage(format!(
-            "'{command}' is reserved and not available in Occurframe {TOOL_VERSION}; this prerelease implements only 'test'"
-        ))),
+        // `explain`, `classify` and `occurrences` are deliberately absent from
+        // the command tree. Under ERRATA-001 they are deferred behind the engine
+        // gate, so they are not part of the v1 contract and are not recognized
+        // specially: an ordinary usage error is the honest answer, and a
+        // dedicated "reserved" reply would advertise a surface that does not
+        // exist.
         unknown => Err(CliError::usage(format!(
-            "unknown command '{unknown}'; the only implemented command is 'test'"
+            "unknown command '{unknown}'; Occurframe {TOOL_VERSION} implements one command, 'test'"
         ))),
     }
 }
@@ -205,9 +212,36 @@ fn success_text(text: String) -> CommandResult {
     }
 }
 
+/// The embedded corpus identity, when the shipped lock parses.
+fn embedded_corpus_lock() -> Option<CorpusLock> {
+    serde_json::from_str(CORPUS_LOCK_JSON).ok()
+}
+
+/// `--version` reports every identity a result depends on, not just the binary's.
+///
+/// A conformance result is meaningless without the specification it was scored
+/// against, the corpus it came from and the protocol it was gathered over, and
+/// those version independently of the tool.
+fn version_text() -> String {
+    let mut output = format!(
+        "occurframe {TOOL_VERSION}\nspecification {SPECIFICATION_VERSION}\nrunner-protocol {RUNNER_PROTOCOL_VERSION}\n"
+    );
+    if let Some(lock) = embedded_corpus_lock() {
+        let _ = writeln!(output, "corpus {}", lock.corpus_version);
+    }
+    output
+}
+
+/// Default help advertises exactly what v1 ships.
+///
+/// The deferred commands are absent by design. Listing them here — even as
+/// "reserved" — would present a four-command surface that Occurframe cannot
+/// implement without the recurrence engine the ORACLE ONLY verdict does not
+/// authorise. They are documented in the engine-gated section of the docs
+/// instead, where the reader can see why they are not here.
 fn top_level_help() -> String {
     format!(
-        "Occurframe {TOOL_VERSION} — executable conformance oracle\n\nUSAGE:\n    occurframe test --engine <adapter> [OPTIONS]\n    oframe test --engine <adapter> [OPTIONS]\n\nCOMMANDS:\n    test         Execute and score corpus vectors\n    explain      Reserved; not available in this prerelease\n    classify     Reserved; not available in this prerelease\n    occurrences  Reserved; not available in this prerelease\n\nOccurframe is not a scheduling engine.\n"
+        "Occurframe {TOOL_VERSION} — executable conformance oracle\n\nUSAGE:\n    occurframe test --engine <adapter> [OPTIONS]\n    oframe test --engine <adapter> [OPTIONS]\n\nCOMMANDS:\n    test    Execute corpus vectors against an external engine and score the result\n\nOccurframe observes recurrence implementations. It computes no occurrence, and\nit is not a scheduling engine.\n\nSpecification {SPECIFICATION_VERSION} · runner protocol {RUNNER_PROTOCOL_VERSION}\n"
     )
 }
 
@@ -603,6 +637,7 @@ fn build_report(
     Ok(CliReport {
         schema_version: "1.0.0".into(),
         tooling_version: TOOL_VERSION.into(),
+        specification_version: SPECIFICATION_VERSION.into(),
         runner_protocol_version: RUNNER_PROTOCOL_VERSION.into(),
         corpus: CorpusIdentity {
             version: corpus.corpus_version.clone(),
@@ -683,6 +718,7 @@ fn exit_code_for(report: &CliReport) -> u8 {
 fn render_text(report: &CliReport) -> String {
     let mut output = String::new();
     let _ = writeln!(output, "Occurframe conformance result");
+    let _ = writeln!(output, "specification: {}", report.specification_version);
     let _ = writeln!(output, "engine: {}", report.engine.engine.name);
     let _ = writeln!(output, "engine version: {}", report.engine.engine.version);
     let _ = writeln!(output, "corpus version: {}", report.corpus.version);
@@ -781,6 +817,10 @@ fn render_junit(report: &CliReport) -> String {
     output.push_str("  <properties>\n");
     for (name, value) in [
         ("occurframe.version", report.tooling_version.as_str()),
+        (
+            "occurframe.specification",
+            report.specification_version.as_str(),
+        ),
         (
             "occurframe.protocol",
             report.runner_protocol_version.as_str(),
@@ -989,16 +1029,67 @@ mod tests {
     }
 
     #[test]
-    fn reserved_commands_are_unimplemented() {
+    fn the_v1_command_surface_is_exactly_one_semantic_command() {
+        // ERRATA-001: the deferred evaluator commands are not part of the v1
+        // contract, so they behave as any other unknown word — not as a
+        // recognized-but-unavailable command, which would advertise a surface
+        // Occurframe cannot implement without a recurrence engine.
+        let unknown = execute(&["not-a-command".into()], false);
         for command in ["explain", "classify", "occurrences"] {
             let result = execute(&[command.into()], false);
             assert_eq!(result.exit_code, EXIT_USAGE);
+            let stderr = String::from_utf8(result.stderr).expect("UTF-8");
             assert!(
-                String::from_utf8(result.stderr)
-                    .expect("UTF-8")
-                    .contains("reserved")
+                stderr.contains(&format!("unknown command '{command}'")),
+                "{command} must be an ordinary usage error, found: {stderr}"
+            );
+            assert!(
+                !stderr.contains("reserved"),
+                "{command} must not be advertised as reserved"
+            );
+            assert_eq!(
+                result.exit_code, unknown.exit_code,
+                "{command} must not be distinguishable from any other unknown command"
             );
         }
+    }
+
+    #[test]
+    fn help_and_version_advertise_one_command_and_claim_no_engine() {
+        let help = String::from_utf8(execute(&["--help".into()], false).stdout).expect("UTF-8");
+        assert!(help.contains("occurframe test --engine"));
+        assert!(help.contains("oframe test --engine"));
+        for deferred in ["explain", "classify", "occurrences"] {
+            assert!(
+                !help.contains(deferred),
+                "default help must not advertise the engine-gated command {deferred}"
+            );
+        }
+        assert!(help.contains("computes no occurrence"));
+        assert!(help.contains("not a scheduling engine"));
+        assert!(help.contains(SPECIFICATION_VERSION));
+
+        let version =
+            String::from_utf8(execute(&["--version".into()], false).stdout).expect("UTF-8");
+        assert!(version.starts_with(&format!("occurframe {TOOL_VERSION}\n")));
+        assert!(version.contains(&format!("specification {SPECIFICATION_VERSION}")));
+        assert!(version.contains(&format!("runner-protocol {RUNNER_PROTOCOL_VERSION}")));
+        assert!(version.contains("corpus 1.0.0-rc2"));
+    }
+
+    #[test]
+    fn the_embedded_corpus_lock_pins_the_certified_rc2_identity() {
+        let lock = embedded_corpus_lock().expect("embedded corpus lock parses");
+        assert_eq!(lock.corpus_version, "1.0.0-rc2");
+        assert_eq!(
+            lock.canonical_digest,
+            "4804772d20fb36c7329b2c5f2f28e264d9bc00b11e407e76d9836fc38cd80470"
+        );
+        assert_eq!(lock.vector_count, 184);
+        assert_eq!(
+            lock.corpus_repository,
+            "https://github.com/occurframe/corpus"
+        );
     }
 
     #[test]
@@ -1126,39 +1217,39 @@ mod tests {
         let expected = BTreeMap::from([
             (
                 "text_success",
-                "b726d310750e047562c96367ad33f47fc42f9353e3221e08af163f495ac535b7",
+                "b68cf35cdcf530262c2ce53db2668504df94ba7ef923b247fa2b5a614d9f274a",
             ),
             (
                 "text_failure",
-                "3bb4b0c14d1f1cbc44c18d1568a22187e4faceab90d196e8fd1ef1ec70b32191",
+                "d51aa7a974696cfc39485593b4558c8446ec00b4252b332e6b68926f05e17508",
             ),
             (
                 "json_success",
-                "0c9b6fe7fd767d53152cde4adac74079e8720c710ed9f1ddca1ffd244aa2132b",
+                "2bf889d38ce8ecd9c8c270c5aeaad91a1a5be2077854ec4ae2a51e5e2e8b3f3e",
             ),
             (
                 "json_mixed",
-                "09383f829bb94eeb8744b1ed74e9d72a2a2b531d5a340c6a0a4c3d4e958a7c11",
+                "925cea74d3e89bc57246f150164c2383a57e35b690d23632182f0fd9df3ff3b4",
             ),
             (
                 "junit",
-                "7e329e5c1fd1ddc6ac1157e88247b84917a28ed28838c606f2fb5c71c8b86770",
+                "571389aaf8c552b0e2daf828135059476c4a313712bd47da04c83fc1d11763e7",
             ),
             (
                 "json_unsupported",
-                "3806c8faeb97630d24cd0e610b821951d37e5e5fcaddaac2bada6d21748d55cb",
+                "b3ff68aeca1ced45c98c4589e81591264e54683ebab484acdd72680dca94c230",
             ),
             (
                 "json_engine_error",
-                "bc5de74934bc843c9375422a7ceb00b396bb4cce0df20c9044bf8a7ea959e3d4",
+                "6f016d8699bf36d5b1bc240935eaa1d5e81d08756dfb7317ef8860bfd46c245d",
             ),
             (
                 "json_timeout",
-                "17b8a335de31cb93cabf2d59fcd0f9ac1008a7f9fb2de50abc25bcc3847da230",
+                "e2f0e22f15dadb419f8733644973529b5fe90710f116ba506011f438ffbf7eaa",
             ),
             (
                 "json_runner_failure",
-                "c3664ca664d3568866516374fc4e6a456e97d31e7272f94e288e36ab8445b2bf",
+                "46354b627f25995ab535043340e8237fd02cb0d7ec4950ab5a3b2820d66d7706",
             ),
         ]);
         let actual = outputs
@@ -1262,6 +1353,7 @@ mod tests {
         CliReport {
             schema_version: "1.0.0".into(),
             tooling_version: TOOL_VERSION.into(),
+            specification_version: SPECIFICATION_VERSION.into(),
             runner_protocol_version: "2.0".into(),
             corpus: CorpusIdentity {
                 version: "1.0.0-rc2".into(),
