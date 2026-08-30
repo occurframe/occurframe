@@ -1,0 +1,14 @@
+{
+  "repositories": [
+    {
+      "directory": ".adapter-deps/php-cron-expression",
+      "repository": "https://github.com/dragonmantank/cron-expression.git",
+      "commit": "d425a2403c17d7cf911c55a7170f073979a9f382"
+    },
+    {
+      "directory": ".adapter-deps/php-rrule",
+      "repository": "https://github.com/rlanvin/php-rrule.git",
+      "commit": "93a083db12dcb6f58e4840392a22e158ce96f1ff"
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+# Exact Phase II RC1 engine surface. Install into an isolated Python 3.11.15 environment.
+git+https://github.com/kiorky/croniter.git@3dd4d14e971294c03d3fb9be3f5ca03ae1c25310
+git+https://github.com/cuu508/cronsim.git@fd2e617787e94b15beee27fee6ebe6cbe79a72a2
+git+https://github.com/agronholm/apscheduler.git@4308ec95b94069f5dbdddb6c60fb792dfc8c40a4
+python-dateutil==2.9.0.post0
+pandas==3.0.2
+tzdata==2026.3
+numpy==2.5.2
+six==1.17.0
+tzlocal==5.4.4

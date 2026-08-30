@@ -1,0 +1,1491 @@
+{
+  "schema_version": "1.0.0",
+  "builds": [
+    {
+      "build_id": "python.croniter.system",
+      "protocol_version": "2.0",
+      "runner": {
+        "name": "occurframe-python-runner",
+        "version": "2.0.0",
+        "provenance": "source:runners/python/runner.py"
+      },
+      "engine": {
+        "name": "croniter",
+        "version": "6.3.0.dev0",
+        "provenance": "git kiorky/croniter@3dd4d14e971294c03d3fb9be3f5ca03ae1c25310"
+      },
+      "language": "Python",
+      "runtime_name": "CPython",
+      "runtime_requirement": "3.11.15",
+      "launch": {
+        "program": "runners/python/.venv/bin/python",
+        "arguments": [
+          "runners/python/runner.py",
+          "--engine",
+          "croniter",
+          "--tzdata",
+          "system"
+        ],
+        "working_directory": ".",
+        "environment": {
+          "PYTHONTZPATH": "/usr/share/zoneinfo"
+        }
+      },
+      "supported_operations": [
+        "cron.next",
+        "cron.parse"
+      ],
+      "dialect_ids": [
+        "cron.croniter-6-or@1"
+      ],
+      "semantic_profile_claims": {
+        "cron.start_inclusivity": "exclusive"
+      },
+      "tzdb_provenance_acquisition": "read tzdata.zi from CPython zoneinfo search path",
+      "tzdb_source": "system zoneinfo",
+      "allowed_tzdb_release_kinds": [
+        "exact",
+        "unknown"
+      ],
+      "fallback_tzdb_provenance": {
+        "source": "system zoneinfo",
+        "release_kind": "unknown"
+      },
+      "representative_vectors": [
+        "CRON-ANCH-001",
+        "CRON-INV-001",
+        "CRON-DST-001",
+        "CRON-DAYF-001",
+        "RRULE-CORE-001",
+        "TZDB-001"
+      ],
+      "reproducibility": {
+        "status": "reproducible",
+        "setup": "CPython 3.11.15 virtualenv plus runners/python/requirements.lock"
+      },
+      "legacy_source": "occurframe/corpus legacy/phase2-rc1/runners/run_python.py"
+    },
+    {
+      "build_id": "python.croniter.vendored",
+      "protocol_version": "2.0",
+      "runner": {
+        "name": "occurframe-python-runner",
+        "version": "2.0.0",
+        "provenance": "source:runners/python/runner.py"
+      },
+      "engine": {
+        "name": "croniter",
+        "version": "6.3.0.dev0",
+        "provenance": "git kiorky/croniter@3dd4d14e971294c03d3fb9be3f5ca03ae1c25310"
+      },
+      "language": "Python",
+      "runtime_name": "CPython",
+      "runtime_requirement": "3.11.15",
+      "launch": {
+        "program": "runners/python/.venv/bin/python",
+        "arguments": [
+          "runners/python/runner.py",
+          "--engine",
+          "croniter",
+          "--tzdata",
+          "vendored"
+        ],
+        "working_directory": ".",
+        "environment": {}
+      },
+      "supported_operations": [
+        "cron.next",
+        "cron.parse"
+      ],
+      "dialect_ids": [
+        "cron.croniter-6-or@1"
+      ],
+      "semantic_profile_claims": {
+        "cron.start_inclusivity": "exclusive"
+      },
+      "tzdb_provenance_acquisition": "tzdata.IANA_VERSION from pinned tzdata package",
+      "tzdb_source": "python tzdata package",
+      "allowed_tzdb_release_kinds": [
+        "exact"
+      ],
+      "fallback_tzdb_provenance": {
+        "source": "python tzdata package",
+        "release_kind": "exact",
+        "release": "2026c",
+        "fingerprint": "tzdata-2026.3"
+      },
+      "representative_vectors": [
+        "CRON-ANCH-001",
+        "CRON-INV-001",
+        "CRON-DST-001",
+        "CRON-DAYF-001",
+        "RRULE-CORE-001",
+        "TZDB-001"
+      ],
+      "reproducibility": {
+        "status": "reproducible",
+        "setup": "CPython 3.11.15 virtualenv plus runners/python/requirements.lock"
+      },
+      "legacy_source": "occurframe/corpus legacy/phase2-rc1/runners/run_python.py"
+    },
+    {
+      "build_id": "python.croniterAnd.system",
+      "protocol_version": "2.0",
+      "runner": {
+        "name": "occurframe-python-runner",
+        "version": "2.0.0",
+        "provenance": "source:runners/python/runner.py"
+      },
+      "engine": {
+        "name": "croniter[day_or=False]",
+        "version": "6.3.0.dev0",
+        "provenance": "git kiorky/croniter@3dd4d14e971294c03d3fb9be3f5ca03ae1c25310"
+      },
+      "language": "Python",
+      "runtime_name": "CPython",
+      "runtime_requirement": "3.11.15",
+      "launch": {
+        "program": "runners/python/.venv/bin/python",
+        "arguments": [
+          "runners/python/runner.py",
+          "--engine",
+          "croniter[day_or=False]",
+          "--tzdata",
+          "system"
+        ],
+        "working_directory": ".",
+        "environment": {
+          "PYTHONTZPATH": "/usr/share/zoneinfo"
+        }
+      },
+      "supported_operations": [
+        "cron.next",
+        "cron.parse"
+      ],
+      "dialect_ids": [
+        "cron.croniter-6-and@1"
+      ],
+      "semantic_profile_claims": {
+        "cron.start_inclusivity": "exclusive"
+      },
+      "tzdb_provenance_acquisition": "read tzdata.zi from CPython zoneinfo search path",
+      "tzdb_source": "system zoneinfo",
+      "allowed_tzdb_release_kinds": [
+        "exact",
+        "unknown"
+      ],
+      "fallback_tzdb_provenance": {
+        "source": "system zoneinfo",
+        "release_kind": "unknown"
+      },
+      "representative_vectors": [
+        "CRON-ANCH-001",
+        "CRON-INV-001",
+        "CRON-DST-001",
+        "CRON-DAYF-001",
+        "RRULE-CORE-001",
+        "TZDB-001"
+      ],
+      "reproducibility": {
+        "status": "reproducible",
+        "setup": "CPython 3.11.15 virtualenv plus runners/python/requirements.lock"
+      },
+      "legacy_source": "occurframe/corpus legacy/phase2-rc1/runners/run_python.py"
+    },
+    {
+      "build_id": "python.croniterAnd.vendored",
+      "protocol_version": "2.0",
+      "runner": {
+        "name": "occurframe-python-runner",
+        "version": "2.0.0",
+        "provenance": "source:runners/python/runner.py"
+      },
+      "engine": {
+        "name": "croniter[day_or=False]",
+        "version": "6.3.0.dev0",
+        "provenance": "git kiorky/croniter@3dd4d14e971294c03d3fb9be3f5ca03ae1c25310"
+      },
+      "language": "Python",
+      "runtime_name": "CPython",
+      "runtime_requirement": "3.11.15",
+      "launch": {
+        "program": "runners/python/.venv/bin/python",
+        "arguments": [
+          "runners/python/runner.py",
+          "--engine",
+          "croniter[day_or=False]",
+          "--tzdata",
+          "vendored"
+        ],
+        "working_directory": ".",
+        "environment": {}
+      },
+      "supported_operations": [
+        "cron.next",
+        "cron.parse"
+      ],
+      "dialect_ids": [
+        "cron.croniter-6-and@1"
+      ],
+      "semantic_profile_claims": {
+        "cron.start_inclusivity": "exclusive"
+      },
+      "tzdb_provenance_acquisition": "tzdata.IANA_VERSION from pinned tzdata package",
+      "tzdb_source": "python tzdata package",
+      "allowed_tzdb_release_kinds": [
+        "exact"
+      ],
+      "fallback_tzdb_provenance": {
+        "source": "python tzdata package",
+        "release_kind": "exact",
+        "release": "2026c",
+        "fingerprint": "tzdata-2026.3"
+      },
+      "representative_vectors": [
+        "CRON-ANCH-001",
+        "CRON-INV-001",
+        "CRON-DST-001",
+        "CRON-DAYF-001",
+        "RRULE-CORE-001",
+        "TZDB-001"
+      ],
+      "reproducibility": {
+        "status": "reproducible",
+        "setup": "CPython 3.11.15 virtualenv plus runners/python/requirements.lock"
+      },
+      "legacy_source": "occurframe/corpus legacy/phase2-rc1/runners/run_python.py"
+    },
+    {
+      "build_id": "python.cronsim.system",
+      "protocol_version": "2.0",
+      "runner": {
+        "name": "occurframe-python-runner",
+        "version": "2.0.0",
+        "provenance": "source:runners/python/runner.py"
+      },
+      "engine": {
+        "name": "cronsim",
+        "version": "2.7",
+        "provenance": "git cuu508/cronsim@fd2e617787e94b15beee27fee6ebe6cbe79a72a2"
+      },
+      "language": "Python",
+      "runtime_name": "CPython",
+      "runtime_requirement": "3.11.15",
+      "launch": {
+        "program": "runners/python/.venv/bin/python",
+        "arguments": [
+          "runners/python/runner.py",
+          "--engine",
+          "cronsim",
+          "--tzdata",
+          "system"
+        ],
+        "working_directory": ".",
+        "environment": {
+          "PYTHONTZPATH": "/usr/share/zoneinfo"
+        }
+      },
+      "supported_operations": [
+        "cron.next",
+        "cron.parse"
+      ],
+      "dialect_ids": [],
+      "semantic_profile_claims": {},
+      "tzdb_provenance_acquisition": "read tzdata.zi from CPython zoneinfo search path",
+      "tzdb_source": "system zoneinfo",
+      "allowed_tzdb_release_kinds": [
+        "exact",
+        "unknown"
+      ],
+      "fallback_tzdb_provenance": {
+        "source": "system zoneinfo",
+        "release_kind": "unknown"
+      },
+      "representative_vectors": [
+        "CRON-ANCH-001",
+        "CRON-INV-001",
+        "CRON-DST-001",
+        "CRON-DAYF-001",
+        "RRULE-CORE-001",
+        "TZDB-001"
+      ],
+      "reproducibility": {
+        "status": "reproducible",
+        "setup": "CPython 3.11.15 virtualenv plus runners/python/requirements.lock"
+      },
+      "legacy_source": "occurframe/corpus legacy/phase2-rc1/runners/run_python.py"
+    },
+    {
+      "build_id": "python.cronsim.vendored",
+      "protocol_version": "2.0",
+      "runner": {
+        "name": "occurframe-python-runner",
+        "version": "2.0.0",
+        "provenance": "source:runners/python/runner.py"
+      },
+      "engine": {
+        "name": "cronsim",
+        "version": "2.7",
+        "provenance": "git cuu508/cronsim@fd2e617787e94b15beee27fee6ebe6cbe79a72a2"
+      },
+      "language": "Python",
+      "runtime_name": "CPython",
+      "runtime_requirement": "3.11.15",
+      "launch": {
+        "program": "runners/python/.venv/bin/python",
+        "arguments": [
+          "runners/python/runner.py",
+          "--engine",
+          "cronsim",
+          "--tzdata",
+          "vendored"
+        ],
+        "working_directory": ".",
+        "environment": {}
+      },
+      "supported_operations": [
+        "cron.next",
+        "cron.parse"
+      ],
+      "dialect_ids": [],
+      "semantic_profile_claims": {},
+      "tzdb_provenance_acquisition": "tzdata.IANA_VERSION from pinned tzdata package",
+      "tzdb_source": "python tzdata package",
+      "allowed_tzdb_release_kinds": [
+        "exact"
+      ],
+      "fallback_tzdb_provenance": {
+        "source": "python tzdata package",
+        "release_kind": "exact",
+        "release": "2026c",
+        "fingerprint": "tzdata-2026.3"
+      },
+      "representative_vectors": [
+        "CRON-ANCH-001",
+        "CRON-INV-001",
+        "CRON-DST-001",
+        "CRON-DAYF-001",
+        "RRULE-CORE-001",
+        "TZDB-001"
+      ],
+      "reproducibility": {
+        "status": "reproducible",
+        "setup": "CPython 3.11.15 virtualenv plus runners/python/requirements.lock"
+      },
+      "legacy_source": "occurframe/corpus legacy/phase2-rc1/runners/run_python.py"
+    },
+    {
+      "build_id": "python.aps.system",
+      "protocol_version": "2.0",
+      "runner": {
+        "name": "occurframe-python-runner",
+        "version": "2.0.0",
+        "provenance": "source:runners/python/runner.py"
+      },
+      "engine": {
+        "name": "apscheduler3",
+        "version": "3.11.3",
+        "provenance": "git agronholm/apscheduler@4308ec95b94069f5dbdddb6c60fb792dfc8c40a4"
+      },
+      "language": "Python",
+      "runtime_name": "CPython",
+      "runtime_requirement": "3.11.15",
+      "launch": {
+        "program": "runners/python/.venv/bin/python",
+        "arguments": [
+          "runners/python/runner.py",
+          "--engine",
+          "apscheduler3",
+          "--tzdata",
+          "system"
+        ],
+        "working_directory": ".",
+        "environment": {
+          "PYTHONTZPATH": "/usr/share/zoneinfo"
+        }
+      },
+      "supported_operations": [
+        "cron.next",
+        "cron.parse"
+      ],
+      "dialect_ids": [
+        "cron.apscheduler-3@1"
+      ],
+      "semantic_profile_claims": {
+        "cron.start_inclusivity": "inclusive"
+      },
+      "tzdb_provenance_acquisition": "read tzdata.zi from CPython zoneinfo search path",
+      "tzdb_source": "system zoneinfo",
+      "allowed_tzdb_release_kinds": [
+        "exact",
+        "unknown"
+      ],
+      "fallback_tzdb_provenance": {
+        "source": "system zoneinfo",
+        "release_kind": "unknown"
+      },
+      "representative_vectors": [
+        "CRON-ANCH-001",
+        "CRON-INV-001",
+        "CRON-DST-001",
+        "CRON-DAYF-001",
+        "RRULE-CORE-001",
+        "TZDB-001"
+      ],
+      "reproducibility": {
+        "status": "reproducible",
+        "setup": "CPython 3.11.15 virtualenv plus runners/python/requirements.lock"
+      },
+      "legacy_source": "occurframe/corpus legacy/phase2-rc1/runners/run_python.py"
+    },
+    {
+      "build_id": "python.aps.vendored",
+      "protocol_version": "2.0",
+      "runner": {
+        "name": "occurframe-python-runner",
+        "version": "2.0.0",
+        "provenance": "source:runners/python/runner.py"
+      },
+      "engine": {
+        "name": "apscheduler3",
+        "version": "3.11.3",
+        "provenance": "git agronholm/apscheduler@4308ec95b94069f5dbdddb6c60fb792dfc8c40a4"
+      },
+      "language": "Python",
+      "runtime_name": "CPython",
+      "runtime_requirement": "3.11.15",
+      "launch": {
+        "program": "runners/python/.venv/bin/python",
+        "arguments": [
+          "runners/python/runner.py",
+          "--engine",
+          "apscheduler3",
+          "--tzdata",
+          "vendored"
+        ],
+        "working_directory": ".",
+        "environment": {}
+      },
+      "supported_operations": [
+        "cron.next",
+        "cron.parse"
+      ],
+      "dialect_ids": [
+        "cron.apscheduler-3@1"
+      ],
+      "semantic_profile_claims": {
+        "cron.start_inclusivity": "inclusive"
+      },
+      "tzdb_provenance_acquisition": "tzdata.IANA_VERSION from pinned tzdata package",
+      "tzdb_source": "python tzdata package",
+      "allowed_tzdb_release_kinds": [
+        "exact"
+      ],
+      "fallback_tzdb_provenance": {
+        "source": "python tzdata package",
+        "release_kind": "exact",
+        "release": "2026c",
+        "fingerprint": "tzdata-2026.3"
+      },
+      "representative_vectors": [
+        "CRON-ANCH-001",
+        "CRON-INV-001",
+        "CRON-DST-001",
+        "CRON-DAYF-001",
+        "RRULE-CORE-001",
+        "TZDB-001"
+      ],
+      "reproducibility": {
+        "status": "reproducible",
+        "setup": "CPython 3.11.15 virtualenv plus runners/python/requirements.lock"
+      },
+      "legacy_source": "occurframe/corpus legacy/phase2-rc1/runners/run_python.py"
+    },
+    {
+      "build_id": "python.dateutil.system",
+      "protocol_version": "2.0",
+      "runner": {
+        "name": "occurframe-python-runner",
+        "version": "2.0.0",
+        "provenance": "source:runners/python/runner.py"
+      },
+      "engine": {
+        "name": "python-dateutil",
+        "version": "2.9.0.post0",
+        "provenance": "PyPI python-dateutil==2.9.0.post0"
+      },
+      "language": "Python",
+      "runtime_name": "CPython",
+      "runtime_requirement": "3.11.15",
+      "launch": {
+        "program": "runners/python/.venv/bin/python",
+        "arguments": [
+          "runners/python/runner.py",
+          "--engine",
+          "python-dateutil",
+          "--tzdata",
+          "system"
+        ],
+        "working_directory": ".",
+        "environment": {
+          "PYTHONTZPATH": "/usr/share/zoneinfo"
+        }
+      },
+      "supported_operations": [
+        "rrule.expand",
+        "rrule.parse",
+        "rrule.between"
+      ],
+      "dialect_ids": [],
+      "semantic_profile_claims": {},
+      "tzdb_provenance_acquisition": "read tzdata.zi from CPython zoneinfo search path",
+      "tzdb_source": "system zoneinfo",
+      "allowed_tzdb_release_kinds": [
+        "exact",
+        "unknown"
+      ],
+      "fallback_tzdb_provenance": {
+        "source": "system zoneinfo",
+        "release_kind": "unknown"
+      },
+      "representative_vectors": [
+        "RRULE-CORE-001",
+        "RRULE-CORE-016",
+        "RRULE-CORE-017",
+        "CRON-ANCH-001",
+        "TZDB-001"
+      ],
+      "reproducibility": {
+        "status": "reproducible",
+        "setup": "CPython 3.11.15 virtualenv plus runners/python/requirements.lock"
+      },
+      "legacy_source": "occurframe/corpus legacy/phase2-rc1/runners/run_python.py"
+    },
+    {
+      "build_id": "python.dateutil.vendored",
+      "protocol_version": "2.0",
+      "runner": {
+        "name": "occurframe-python-runner",
+        "version": "2.0.0",
+        "provenance": "source:runners/python/runner.py"
+      },
+      "engine": {
+        "name": "python-dateutil",
+        "version": "2.9.0.post0",
+        "provenance": "PyPI python-dateutil==2.9.0.post0"
+      },
+      "language": "Python",
+      "runtime_name": "CPython",
+      "runtime_requirement": "3.11.15",
+      "launch": {
+        "program": "runners/python/.venv/bin/python",
+        "arguments": [
+          "runners/python/runner.py",
+          "--engine",
+          "python-dateutil",
+          "--tzdata",
+          "vendored"
+        ],
+        "working_directory": ".",
+        "environment": {}
+      },
+      "supported_operations": [
+        "rrule.expand",
+        "rrule.parse",
+        "rrule.between"
+      ],
+      "dialect_ids": [],
+      "semantic_profile_claims": {},
+      "tzdb_provenance_acquisition": "tzdata.IANA_VERSION from pinned tzdata package",
+      "tzdb_source": "python tzdata package",
+      "allowed_tzdb_release_kinds": [
+        "exact"
+      ],
+      "fallback_tzdb_provenance": {
+        "source": "python tzdata package",
+        "release_kind": "exact",
+        "release": "2026c",
+        "fingerprint": "tzdata-2026.3"
+      },
+      "representative_vectors": [
+        "RRULE-CORE-001",
+        "RRULE-CORE-016",
+        "RRULE-CORE-017",
+        "CRON-ANCH-001",
+        "TZDB-001"
+      ],
+      "reproducibility": {
+        "status": "reproducible",
+        "setup": "CPython 3.11.15 virtualenv plus runners/python/requirements.lock"
+      },
+      "legacy_source": "occurframe/corpus legacy/phase2-rc1/runners/run_python.py"
+    },
+    {
+      "build_id": "python.pandas.system",
+      "protocol_version": "2.0",
+      "runner": {
+        "name": "occurframe-python-runner",
+        "version": "2.0.0",
+        "provenance": "source:runners/python/runner.py"
+      },
+      "engine": {
+        "name": "pandas",
+        "version": "3.0.2",
+        "provenance": "PyPI pandas==3.0.2"
+      },
+      "language": "Python",
+      "runtime_name": "CPython",
+      "runtime_requirement": "3.11.15",
+      "launch": {
+        "program": "runners/python/.venv/bin/python",
+        "arguments": [
+          "runners/python/runner.py",
+          "--engine",
+          "pandas",
+          "--tzdata",
+          "system"
+        ],
+        "working_directory": ".",
+        "environment": {
+          "PYTHONTZPATH": "/usr/share/zoneinfo"
+        }
+      },
+      "supported_operations": [
+        "rrule.expand"
+      ],
+      "dialect_ids": [],
+      "semantic_profile_claims": {},
+      "tzdb_provenance_acquisition": "read tzdata.zi from CPython zoneinfo search path",
+      "tzdb_source": "system zoneinfo",
+      "allowed_tzdb_release_kinds": [
+        "exact",
+        "unknown"
+      ],
+      "fallback_tzdb_provenance": {
+        "source": "system zoneinfo",
+        "release_kind": "unknown"
+      },
+      "representative_vectors": [
+        "RRULE-CORE-001",
+        "RRULE-CORE-016",
+        "RRULE-CORE-017",
+        "CRON-ANCH-001",
+        "TZDB-001"
+      ],
+      "reproducibility": {
+        "status": "reproducible",
+        "setup": "CPython 3.11.15 virtualenv plus runners/python/requirements.lock"
+      },
+      "legacy_source": "occurframe/corpus legacy/phase2-rc1/runners/run_python.py"
+    },
+    {
+      "build_id": "python.pandas.vendored",
+      "protocol_version": "2.0",
+      "runner": {
+        "name": "occurframe-python-runner",
+        "version": "2.0.0",
+        "provenance": "source:runners/python/runner.py"
+      },
+      "engine": {
+        "name": "pandas",
+        "version": "3.0.2",
+        "provenance": "PyPI pandas==3.0.2"
+      },
+      "language": "Python",
+      "runtime_name": "CPython",
+      "runtime_requirement": "3.11.15",
+      "launch": {
+        "program": "runners/python/.venv/bin/python",
+        "arguments": [
+          "runners/python/runner.py",
+          "--engine",
+          "pandas",
+          "--tzdata",
+          "vendored"
+        ],
+        "working_directory": ".",
+        "environment": {}
+      },
+      "supported_operations": [
+        "rrule.expand"
+      ],
+      "dialect_ids": [],
+      "semantic_profile_claims": {},
+      "tzdb_provenance_acquisition": "tzdata.IANA_VERSION from pinned tzdata package",
+      "tzdb_source": "python tzdata package",
+      "allowed_tzdb_release_kinds": [
+        "exact"
+      ],
+      "fallback_tzdb_provenance": {
+        "source": "python tzdata package",
+        "release_kind": "exact",
+        "release": "2026c",
+        "fingerprint": "tzdata-2026.3"
+      },
+      "representative_vectors": [
+        "RRULE-CORE-001",
+        "RRULE-CORE-016",
+        "RRULE-CORE-017",
+        "CRON-ANCH-001",
+        "TZDB-001"
+      ],
+      "reproducibility": {
+        "status": "reproducible",
+        "setup": "CPython 3.11.15 virtualenv plus runners/python/requirements.lock"
+      },
+      "legacy_source": "occurframe/corpus legacy/phase2-rc1/runners/run_python.py"
+    },
+    {
+      "build_id": "javascript.cron-parser",
+      "protocol_version": "2.0",
+      "runner": {
+        "name": "occurframe-javascript-runner",
+        "version": "2.0.0",
+        "provenance": "source:runners/javascript/runner.mjs"
+      },
+      "engine": {
+        "name": "cron-parser",
+        "version": "5.10.0",
+        "provenance": "git harrisiirak/cron-parser@7b3a0ad748bffd6eaf6af4caac4d83b1fc392378"
+      },
+      "language": "JavaScript",
+      "runtime_name": "Bun",
+      "runtime_requirement": "1.3.13",
+      "launch": {
+        "program": "runners/javascript/node_modules/bun/bin/bun",
+        "arguments": [
+          "runners/javascript/runner.mjs",
+          "--engine",
+          "cron-parser"
+        ],
+        "working_directory": ".",
+        "environment": {}
+      },
+      "supported_operations": [
+        "cron.next",
+        "cron.parse"
+      ],
+      "dialect_ids": [],
+      "semantic_profile_claims": {},
+      "tzdb_provenance_acquisition": "TZDB-001/002/003 runtime ICU fingerprint",
+      "tzdb_source": "runtime ICU",
+      "allowed_tzdb_release_kinds": [
+        "bounded",
+        "exact"
+      ],
+      "fallback_tzdb_provenance": {
+        "source": "runtime ICU",
+        "release_kind": "bounded",
+        "max_inclusive": "2026a",
+        "fingerprint": "TZDB-001/002/003:le2026a"
+      },
+      "representative_vectors": [
+        "CRON-ANCH-001",
+        "CRON-INV-001",
+        "CRON-DST-001",
+        "CRON-DAYF-001",
+        "RRULE-CORE-001",
+        "TZDB-001"
+      ],
+      "reproducibility": {
+        "status": "reproducible",
+        "setup": "Bun 1.3.13 plus npm ci from runners/javascript/package-lock.json"
+      },
+      "legacy_source": "occurframe/corpus legacy/phase2-rc1/runners/run_js.ts"
+    },
+    {
+      "build_id": "javascript.cron-parser-strict",
+      "protocol_version": "2.0",
+      "runner": {
+        "name": "occurframe-javascript-runner",
+        "version": "2.0.0",
+        "provenance": "source:runners/javascript/runner.mjs"
+      },
+      "engine": {
+        "name": "cron-parser[strict]",
+        "version": "5.10.0",
+        "provenance": "git harrisiirak/cron-parser@7b3a0ad748bffd6eaf6af4caac4d83b1fc392378"
+      },
+      "language": "JavaScript",
+      "runtime_name": "Bun",
+      "runtime_requirement": "1.3.13",
+      "launch": {
+        "program": "runners/javascript/node_modules/bun/bin/bun",
+        "arguments": [
+          "runners/javascript/runner.mjs",
+          "--engine",
+          "cron-parser[strict]"
+        ],
+        "working_directory": ".",
+        "environment": {}
+      },
+      "supported_operations": [
+        "cron.next",
+        "cron.parse"
+      ],
+      "dialect_ids": [],
+      "semantic_profile_claims": {},
+      "tzdb_provenance_acquisition": "TZDB-001/002/003 runtime ICU fingerprint",
+      "tzdb_source": "runtime ICU",
+      "allowed_tzdb_release_kinds": [
+        "bounded",
+        "exact"
+      ],
+      "fallback_tzdb_provenance": {
+        "source": "runtime ICU",
+        "release_kind": "bounded",
+        "max_inclusive": "2026a",
+        "fingerprint": "TZDB-001/002/003:le2026a"
+      },
+      "representative_vectors": [
+        "CRON-ANCH-001",
+        "CRON-INV-001",
+        "CRON-DST-001",
+        "CRON-DAYF-001",
+        "RRULE-CORE-001",
+        "TZDB-001"
+      ],
+      "reproducibility": {
+        "status": "reproducible",
+        "setup": "Bun 1.3.13 plus npm ci from runners/javascript/package-lock.json"
+      },
+      "legacy_source": "occurframe/corpus legacy/phase2-rc1/runners/run_js.ts"
+    },
+    {
+      "build_id": "javascript.croner",
+      "protocol_version": "2.0",
+      "runner": {
+        "name": "occurframe-javascript-runner",
+        "version": "2.0.0",
+        "provenance": "source:runners/javascript/runner.mjs"
+      },
+      "engine": {
+        "name": "croner",
+        "version": "10.0.1",
+        "provenance": "git Hexagon/croner@713ee7217e3bbb01857559199e312149d2695edb"
+      },
+      "language": "JavaScript",
+      "runtime_name": "Bun",
+      "runtime_requirement": "1.3.13",
+      "launch": {
+        "program": "runners/javascript/node_modules/bun/bin/bun",
+        "arguments": [
+          "runners/javascript/runner.mjs",
+          "--engine",
+          "croner"
+        ],
+        "working_directory": ".",
+        "environment": {}
+      },
+      "supported_operations": [
+        "cron.next",
+        "cron.parse"
+      ],
+      "dialect_ids": [
+        "cron.croner-10@1"
+      ],
+      "semantic_profile_claims": {},
+      "tzdb_provenance_acquisition": "TZDB-001/002/003 runtime ICU fingerprint",
+      "tzdb_source": "runtime ICU",
+      "allowed_tzdb_release_kinds": [
+        "bounded",
+        "exact"
+      ],
+      "fallback_tzdb_provenance": {
+        "source": "runtime ICU",
+        "release_kind": "bounded",
+        "max_inclusive": "2026a",
+        "fingerprint": "TZDB-001/002/003:le2026a"
+      },
+      "representative_vectors": [
+        "CRON-ANCH-001",
+        "CRON-INV-001",
+        "CRON-DST-001",
+        "CRON-DAYF-001",
+        "RRULE-CORE-001",
+        "TZDB-001"
+      ],
+      "reproducibility": {
+        "status": "reproducible",
+        "setup": "Bun 1.3.13 plus npm ci from runners/javascript/package-lock.json"
+      },
+      "legacy_source": "occurframe/corpus legacy/phase2-rc1/runners/run_js.ts"
+    },
+    {
+      "build_id": "javascript.croner-legacyMode-false",
+      "protocol_version": "2.0",
+      "runner": {
+        "name": "occurframe-javascript-runner",
+        "version": "2.0.0",
+        "provenance": "source:runners/javascript/runner.mjs"
+      },
+      "engine": {
+        "name": "croner[legacyMode=false]",
+        "version": "10.0.1",
+        "provenance": "git Hexagon/croner@713ee7217e3bbb01857559199e312149d2695edb"
+      },
+      "language": "JavaScript",
+      "runtime_name": "Bun",
+      "runtime_requirement": "1.3.13",
+      "launch": {
+        "program": "runners/javascript/node_modules/bun/bin/bun",
+        "arguments": [
+          "runners/javascript/runner.mjs",
+          "--engine",
+          "croner[legacyMode=false]"
+        ],
+        "working_directory": ".",
+        "environment": {}
+      },
+      "supported_operations": [
+        "cron.next",
+        "cron.parse"
+      ],
+      "dialect_ids": [
+        "cron.croner-10@1"
+      ],
+      "semantic_profile_claims": {},
+      "tzdb_provenance_acquisition": "TZDB-001/002/003 runtime ICU fingerprint",
+      "tzdb_source": "runtime ICU",
+      "allowed_tzdb_release_kinds": [
+        "bounded",
+        "exact"
+      ],
+      "fallback_tzdb_provenance": {
+        "source": "runtime ICU",
+        "release_kind": "bounded",
+        "max_inclusive": "2026a",
+        "fingerprint": "TZDB-001/002/003:le2026a"
+      },
+      "representative_vectors": [
+        "CRON-ANCH-001",
+        "CRON-INV-001",
+        "CRON-DST-001",
+        "CRON-DAYF-001",
+        "RRULE-CORE-001",
+        "TZDB-001"
+      ],
+      "reproducibility": {
+        "status": "reproducible",
+        "setup": "Bun 1.3.13 plus npm ci from runners/javascript/package-lock.json"
+      },
+      "legacy_source": "occurframe/corpus legacy/phase2-rc1/runners/run_js.ts"
+    },
+    {
+      "build_id": "javascript.cronstrue",
+      "protocol_version": "2.0",
+      "runner": {
+        "name": "occurframe-javascript-runner",
+        "version": "2.0.0",
+        "provenance": "source:runners/javascript/runner.mjs"
+      },
+      "engine": {
+        "name": "cronstrue",
+        "version": "3.24.0",
+        "provenance": "git bradymholt/cRonstrue@b62884a10cc76705c53be65210784108a6d337dd"
+      },
+      "language": "JavaScript",
+      "runtime_name": "Bun",
+      "runtime_requirement": "1.3.13",
+      "launch": {
+        "program": "runners/javascript/node_modules/bun/bin/bun",
+        "arguments": [
+          "runners/javascript/runner.mjs",
+          "--engine",
+          "cronstrue"
+        ],
+        "working_directory": ".",
+        "environment": {}
+      },
+      "supported_operations": [
+        "cron.next",
+        "cron.parse"
+      ],
+      "dialect_ids": [],
+      "semantic_profile_claims": {},
+      "tzdb_provenance_acquisition": "TZDB-001/002/003 runtime ICU fingerprint",
+      "tzdb_source": "runtime ICU",
+      "allowed_tzdb_release_kinds": [
+        "bounded",
+        "exact"
+      ],
+      "fallback_tzdb_provenance": {
+        "source": "runtime ICU",
+        "release_kind": "bounded",
+        "max_inclusive": "2026a",
+        "fingerprint": "TZDB-001/002/003:le2026a"
+      },
+      "representative_vectors": [
+        "CRON-ANCH-001",
+        "CRON-INV-001",
+        "CRON-DST-001",
+        "CRON-DAYF-001",
+        "RRULE-CORE-001",
+        "TZDB-001"
+      ],
+      "reproducibility": {
+        "status": "reproducible",
+        "setup": "Bun 1.3.13 plus npm ci from runners/javascript/package-lock.json"
+      },
+      "legacy_source": "occurframe/corpus legacy/phase2-rc1/runners/run_js.ts"
+    },
+    {
+      "build_id": "javascript.rrule-js",
+      "protocol_version": "2.0",
+      "runner": {
+        "name": "occurframe-javascript-runner",
+        "version": "2.0.0",
+        "provenance": "source:runners/javascript/runner.mjs"
+      },
+      "engine": {
+        "name": "rrule.js",
+        "version": "2.8.0",
+        "provenance": "git jkbrzt/rrule@9f2061febeeb363d03352efe33d30c33073a0242"
+      },
+      "language": "JavaScript",
+      "runtime_name": "Bun",
+      "runtime_requirement": "1.3.13",
+      "launch": {
+        "program": "runners/javascript/node_modules/bun/bin/bun",
+        "arguments": [
+          "runners/javascript/runner.mjs",
+          "--engine",
+          "rrule.js"
+        ],
+        "working_directory": ".",
+        "environment": {}
+      },
+      "supported_operations": [
+        "rrule.expand",
+        "rrule.parse",
+        "rrule.between"
+      ],
+      "dialect_ids": [],
+      "semantic_profile_claims": {},
+      "tzdb_provenance_acquisition": "TZDB-001/002/003 runtime ICU fingerprint",
+      "tzdb_source": "runtime ICU",
+      "allowed_tzdb_release_kinds": [
+        "bounded",
+        "exact"
+      ],
+      "fallback_tzdb_provenance": {
+        "source": "runtime ICU",
+        "release_kind": "bounded",
+        "max_inclusive": "2026a",
+        "fingerprint": "TZDB-001/002/003:le2026a"
+      },
+      "representative_vectors": [
+        "RRULE-CORE-001",
+        "RRULE-CORE-016",
+        "RRULE-CORE-017",
+        "CRON-ANCH-001",
+        "TZDB-001"
+      ],
+      "reproducibility": {
+        "status": "reproducible",
+        "setup": "Bun 1.3.13 plus npm ci from runners/javascript/package-lock.json"
+      },
+      "legacy_source": "occurframe/corpus legacy/phase2-rc1/runners/run_js.ts"
+    },
+    {
+      "build_id": "go.robfig-cron",
+      "protocol_version": "2.0",
+      "runner": {
+        "name": "occurframe-go-runner",
+        "version": "2.0.0",
+        "provenance": "source:runners/go/main.go"
+      },
+      "engine": {
+        "name": "robfig-cron",
+        "version": "v3.0.1",
+        "provenance": "git robfig/cron@bc59245fe10efaed9d51b56900192527ed733435"
+      },
+      "language": "Go",
+      "runtime_name": "gc",
+      "runtime_requirement": "go1.24.7",
+      "launch": {
+        "program": "runners/go/bin/occurframe-go-runner",
+        "arguments": [
+          "--engine",
+          "robfig-cron"
+        ],
+        "working_directory": ".",
+        "environment": {}
+      },
+      "supported_operations": [
+        "cron.next",
+        "cron.parse"
+      ],
+      "dialect_ids": [
+        "cron.robfig-v3-standard@1"
+      ],
+      "semantic_profile_claims": {},
+      "tzdb_provenance_acquisition": "read host tzdata.zi used by time.LoadLocation",
+      "tzdb_source": "system zoneinfo",
+      "allowed_tzdb_release_kinds": [
+        "exact",
+        "unknown"
+      ],
+      "fallback_tzdb_provenance": {
+        "source": "system zoneinfo",
+        "release_kind": "unknown"
+      },
+      "representative_vectors": [
+        "CRON-ANCH-001",
+        "CRON-INV-001",
+        "CRON-DST-001",
+        "CRON-DAYF-001",
+        "RRULE-CORE-001",
+        "TZDB-001"
+      ],
+      "reproducibility": {
+        "status": "reproducible",
+        "setup": "Go 1.24.7, go mod download, then go build into runners/go/bin"
+      },
+      "legacy_source": "occurframe/corpus legacy/phase2-rc1/runners/go/main.go"
+    },
+    {
+      "build_id": "go.robfig-cron-seconds",
+      "protocol_version": "2.0",
+      "runner": {
+        "name": "occurframe-go-runner",
+        "version": "2.0.0",
+        "provenance": "source:runners/go/main.go"
+      },
+      "engine": {
+        "name": "robfig-cron[seconds]",
+        "version": "v3.0.1",
+        "provenance": "git robfig/cron@bc59245fe10efaed9d51b56900192527ed733435"
+      },
+      "language": "Go",
+      "runtime_name": "gc",
+      "runtime_requirement": "go1.24.7",
+      "launch": {
+        "program": "runners/go/bin/occurframe-go-runner",
+        "arguments": [
+          "--engine",
+          "robfig-cron[seconds]"
+        ],
+        "working_directory": ".",
+        "environment": {}
+      },
+      "supported_operations": [
+        "cron.next",
+        "cron.parse"
+      ],
+      "dialect_ids": [
+        "cron.robfig-v3-seconds@1"
+      ],
+      "semantic_profile_claims": {},
+      "tzdb_provenance_acquisition": "read host tzdata.zi used by time.LoadLocation",
+      "tzdb_source": "system zoneinfo",
+      "allowed_tzdb_release_kinds": [
+        "exact",
+        "unknown"
+      ],
+      "fallback_tzdb_provenance": {
+        "source": "system zoneinfo",
+        "release_kind": "unknown"
+      },
+      "representative_vectors": [
+        "CRON-ANCH-001",
+        "CRON-INV-001",
+        "CRON-DST-001",
+        "CRON-DAYF-001",
+        "RRULE-CORE-001",
+        "TZDB-001"
+      ],
+      "reproducibility": {
+        "status": "reproducible",
+        "setup": "Go 1.24.7, go mod download, then go build into runners/go/bin"
+      },
+      "legacy_source": "occurframe/corpus legacy/phase2-rc1/runners/go/main.go"
+    },
+    {
+      "build_id": "go.rrule-go",
+      "protocol_version": "2.0",
+      "runner": {
+        "name": "occurframe-go-runner",
+        "version": "2.0.0",
+        "provenance": "source:runners/go/main.go"
+      },
+      "engine": {
+        "name": "rrule-go",
+        "version": "v1.8.2",
+        "provenance": "git teambition/rrule-go@e74d163475cf1ca1fd019752c5c41ea1f472d4c5"
+      },
+      "language": "Go",
+      "runtime_name": "gc",
+      "runtime_requirement": "go1.24.7",
+      "launch": {
+        "program": "runners/go/bin/occurframe-go-runner",
+        "arguments": [
+          "--engine",
+          "rrule-go"
+        ],
+        "working_directory": ".",
+        "environment": {}
+      },
+      "supported_operations": [
+        "rrule.expand",
+        "rrule.parse",
+        "rrule.between"
+      ],
+      "dialect_ids": [],
+      "semantic_profile_claims": {},
+      "tzdb_provenance_acquisition": "read host tzdata.zi used by time.LoadLocation",
+      "tzdb_source": "system zoneinfo",
+      "allowed_tzdb_release_kinds": [
+        "exact",
+        "unknown"
+      ],
+      "fallback_tzdb_provenance": {
+        "source": "system zoneinfo",
+        "release_kind": "unknown"
+      },
+      "representative_vectors": [
+        "RRULE-CORE-001",
+        "RRULE-CORE-016",
+        "RRULE-CORE-017",
+        "CRON-ANCH-001",
+        "TZDB-001"
+      ],
+      "reproducibility": {
+        "status": "reproducible",
+        "setup": "Go 1.24.7, go mod download, then go build into runners/go/bin"
+      },
+      "legacy_source": "occurframe/corpus legacy/phase2-rc1/runners/go/main.go"
+    },
+    {
+      "build_id": "php.php-cron-expression",
+      "protocol_version": "2.0",
+      "runner": {
+        "name": "occurframe-php-runner",
+        "version": "2.0.0",
+        "provenance": "source:runners/php/runner.php"
+      },
+      "engine": {
+        "name": "php-cron-expression",
+        "version": "3.x@d425a24",
+        "provenance": "git dragonmantank/cron-expression@d425a2403c17d7cf911c55a7170f073979a9f382"
+      },
+      "language": "PHP",
+      "runtime_name": "PHP",
+      "runtime_requirement": "8.4.21",
+      "launch": {
+        "program": "php",
+        "arguments": [
+          "runners/php/runner.php",
+          "--engine",
+          "php-cron-expression"
+        ],
+        "working_directory": ".",
+        "environment": {}
+      },
+      "supported_operations": [
+        "cron.next",
+        "cron.parse"
+      ],
+      "dialect_ids": [],
+      "semantic_profile_claims": {},
+      "tzdb_provenance_acquisition": "timezone_version_get plus system tzdata.zi",
+      "tzdb_source": "system zoneinfo",
+      "additional_tzdb_sources": [
+        "PHP bundled tzdb"
+      ],
+      "allowed_tzdb_release_kinds": [
+        "exact",
+        "unknown"
+      ],
+      "fallback_tzdb_provenance": {
+        "source": "system zoneinfo",
+        "release_kind": "unknown"
+      },
+      "representative_vectors": [
+        "CRON-ANCH-001",
+        "CRON-INV-001",
+        "CRON-DST-001",
+        "CRON-DAYF-001",
+        "RRULE-CORE-001",
+        "TZDB-001"
+      ],
+      "reproducibility": {
+        "status": "reproducible",
+        "setup": "PHP 8.4.21 plus exact git checkouts in runners/php/setup.lock.json"
+      },
+      "legacy_source": "occurframe/corpus legacy/phase2-rc1/runners/run_php.php"
+    },
+    {
+      "build_id": "php.php-rrule",
+      "protocol_version": "2.0",
+      "runner": {
+        "name": "occurframe-php-runner",
+        "version": "2.0.0",
+        "provenance": "source:runners/php/runner.php"
+      },
+      "engine": {
+        "name": "php-rrule",
+        "version": "2.x@93a083d",
+        "provenance": "git rlanvin/php-rrule@93a083db12dcb6f58e4840392a22e158ce96f1ff"
+      },
+      "language": "PHP",
+      "runtime_name": "PHP",
+      "runtime_requirement": "8.4.21",
+      "launch": {
+        "program": "php",
+        "arguments": [
+          "runners/php/runner.php",
+          "--engine",
+          "php-rrule"
+        ],
+        "working_directory": ".",
+        "environment": {}
+      },
+      "supported_operations": [
+        "rrule.expand",
+        "rrule.parse",
+        "rrule.between"
+      ],
+      "dialect_ids": [],
+      "semantic_profile_claims": {},
+      "tzdb_provenance_acquisition": "timezone_version_get plus system tzdata.zi",
+      "tzdb_source": "system zoneinfo",
+      "additional_tzdb_sources": [
+        "PHP bundled tzdb"
+      ],
+      "allowed_tzdb_release_kinds": [
+        "exact",
+        "unknown"
+      ],
+      "fallback_tzdb_provenance": {
+        "source": "system zoneinfo",
+        "release_kind": "unknown"
+      },
+      "representative_vectors": [
+        "RRULE-CORE-001",
+        "RRULE-CORE-016",
+        "RRULE-CORE-017",
+        "CRON-ANCH-001",
+        "TZDB-001"
+      ],
+      "reproducibility": {
+        "status": "reproducible",
+        "setup": "PHP 8.4.21 plus exact git checkouts in runners/php/setup.lock.json"
+      },
+      "legacy_source": "occurframe/corpus legacy/phase2-rc1/runners/run_php.php"
+    },
+    {
+      "build_id": "ruby.fugit",
+      "protocol_version": "2.0",
+      "runner": {
+        "name": "occurframe-ruby-runner",
+        "version": "2.0.0",
+        "provenance": "source:runners/ruby/runner.rb"
+      },
+      "engine": {
+        "name": "fugit",
+        "version": "git@efda655",
+        "provenance": "git floraison/fugit@efda655251c2ae86780f7e472a61653b5b4b528b"
+      },
+      "language": "Ruby",
+      "runtime_name": "MRI",
+      "runtime_requirement": "3.3.6",
+      "launch": {
+        "program": "ruby",
+        "arguments": [
+          "runners/ruby/runner.rb",
+          "--engine",
+          "fugit"
+        ],
+        "working_directory": ".",
+        "environment": {}
+      },
+      "supported_operations": [
+        "cron.next",
+        "cron.parse"
+      ],
+      "dialect_ids": [],
+      "semantic_profile_claims": {},
+      "tzdb_provenance_acquisition": "read host tzdata.zi used by TZInfo ZoneinfoDataSource",
+      "tzdb_source": "system zoneinfo",
+      "allowed_tzdb_release_kinds": [
+        "exact",
+        "unknown"
+      ],
+      "fallback_tzdb_provenance": {
+        "source": "system zoneinfo",
+        "release_kind": "unknown"
+      },
+      "representative_vectors": [
+        "CRON-ANCH-001",
+        "CRON-INV-001",
+        "CRON-DST-001",
+        "CRON-DAYF-001",
+        "RRULE-CORE-001",
+        "TZDB-001"
+      ],
+      "reproducibility": {
+        "status": "unreproducible",
+        "setup": "exact git checkouts in runners/ruby/setup.lock.json",
+        "reason": "Phase II provenance did not record the concurrent-ruby commit required by tzinfo; no substitute version is permitted"
+      },
+      "legacy_source": "occurframe/corpus legacy/phase2-rc1/runners/run_ruby.rb"
+    },
+    {
+      "build_id": "ruby.ice_cube",
+      "protocol_version": "2.0",
+      "runner": {
+        "name": "occurframe-ruby-runner",
+        "version": "2.0.0",
+        "provenance": "source:runners/ruby/runner.rb"
+      },
+      "engine": {
+        "name": "ice_cube",
+        "version": "git@32ff145",
+        "provenance": "git seejohnrun/ice_cube@32ff145baf152ae4aa130376d66041eba174b085"
+      },
+      "language": "Ruby",
+      "runtime_name": "MRI",
+      "runtime_requirement": "3.3.6",
+      "launch": {
+        "program": "ruby",
+        "arguments": [
+          "runners/ruby/runner.rb",
+          "--engine",
+          "ice_cube"
+        ],
+        "working_directory": ".",
+        "environment": {}
+      },
+      "supported_operations": [
+        "rrule.expand",
+        "rrule.parse"
+      ],
+      "dialect_ids": [],
+      "semantic_profile_claims": {},
+      "tzdb_provenance_acquisition": "read host tzdata.zi used by TZInfo ZoneinfoDataSource",
+      "tzdb_source": "system zoneinfo",
+      "allowed_tzdb_release_kinds": [
+        "exact",
+        "unknown"
+      ],
+      "fallback_tzdb_provenance": {
+        "source": "system zoneinfo",
+        "release_kind": "unknown"
+      },
+      "representative_vectors": [
+        "RRULE-CORE-001",
+        "RRULE-CORE-016",
+        "RRULE-CORE-017",
+        "CRON-ANCH-001",
+        "TZDB-001"
+      ],
+      "reproducibility": {
+        "status": "unreproducible",
+        "setup": "exact git checkouts in runners/ruby/setup.lock.json",
+        "reason": "Phase II provenance did not record the concurrent-ruby commit required by tzinfo; no substitute version is permitted"
+      },
+      "legacy_source": "occurframe/corpus legacy/phase2-rc1/runners/run_ruby.rb"
+    }
+  ]
+}

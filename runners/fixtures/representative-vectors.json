@@ -1,0 +1,54 @@
+{
+  "schema_version": "1.0.0",
+  "source": "occurframe/corpus 1.0.0-rc2",
+  "vector_ids": [
+    "CRON-ANCH-001",
+    "CRON-DAYF-001",
+    "CRON-DST-001",
+    "CRON-INV-001",
+    "RRULE-CORE-001",
+    "RRULE-CORE-016",
+    "RRULE-CORE-017",
+    "TZDB-001"
+  ],
+  "coverage": {
+    "normal_occurrences": [
+      "CRON-ANCH-001",
+      "RRULE-CORE-001"
+    ],
+    "empty_occurrences": [
+      "RRULE-CORE-017"
+    ],
+    "intentional_rejection": [
+      "CRON-INV-001",
+      "RRULE-CORE-016"
+    ],
+    "warnings": [],
+    "unsupported_capability": [
+      "CRON-ANCH-001",
+      "RRULE-CORE-001",
+      "TZDB-001"
+    ],
+    "civil_time": [
+      "CRON-DST-001"
+    ],
+    "dialect_sensitive": [
+      "CRON-DAYF-001"
+    ],
+    "cron": [
+      "CRON-ANCH-001",
+      "CRON-DAYF-001",
+      "CRON-DST-001",
+      "CRON-INV-001"
+    ],
+    "rrule": [
+      "RRULE-CORE-001",
+      "RRULE-CORE-016",
+      "RRULE-CORE-017"
+    ],
+    "tzdb_provenance": [
+      "TZDB-001"
+    ]
+  },
+  "note": "No Phase II native adapter emitted an orthogonal warning; warning plumbing is certified by the fake-runner suite without inventing a semantic vector."
+}

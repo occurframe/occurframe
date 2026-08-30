@@ -1,0 +1,102 @@
+{
+  "artifact_kind": "adapter_migration_report_not_differential_matrix",
+  "engine_builds_configured": 25,
+  "engine_builds_reproducible": 23,
+  "engine_builds_successfully_handshaken": [
+    "go.robfig-cron",
+    "go.robfig-cron-seconds",
+    "go.rrule-go",
+    "javascript.cron-parser",
+    "javascript.cron-parser-strict",
+    "javascript.croner",
+    "javascript.croner-legacyMode-false",
+    "javascript.cronstrue",
+    "javascript.rrule-js",
+    "php.php-cron-expression",
+    "php.php-rrule",
+    "python.aps.system",
+    "python.aps.vendored",
+    "python.croniter.system",
+    "python.croniter.vendored",
+    "python.croniterAnd.system",
+    "python.croniterAnd.vendored",
+    "python.cronsim.system",
+    "python.cronsim.vendored",
+    "python.dateutil.system",
+    "python.dateutil.vendored",
+    "python.pandas.system",
+    "python.pandas.vendored"
+  ],
+  "engine_builds_successfully_launched": [
+    "go.robfig-cron",
+    "go.robfig-cron-seconds",
+    "go.rrule-go",
+    "javascript.cron-parser",
+    "javascript.cron-parser-strict",
+    "javascript.croner",
+    "javascript.croner-legacyMode-false",
+    "javascript.cronstrue",
+    "javascript.rrule-js",
+    "php.php-cron-expression",
+    "php.php-rrule",
+    "python.aps.system",
+    "python.aps.vendored",
+    "python.croniter.system",
+    "python.croniter.vendored",
+    "python.croniterAnd.system",
+    "python.croniterAnd.vendored",
+    "python.cronsim.system",
+    "python.cronsim.vendored",
+    "python.dateutil.system",
+    "python.dateutil.vendored",
+    "python.pandas.system",
+    "python.pandas.vendored"
+  ],
+  "engine_builds_unreproducible": [
+    {
+      "build_id": "ruby.fugit",
+      "reason": "Phase II provenance did not record the concurrent-ruby commit required by tzinfo; no substitute version is permitted"
+    },
+    {
+      "build_id": "ruby.ice_cube",
+      "reason": "Phase II provenance did not record the concurrent-ruby commit required by tzinfo; no substitute version is permitted"
+    }
+  ],
+  "failed_builds": [],
+  "language_runners_migrated": [
+    "Go",
+    "JavaScript",
+    "PHP",
+    "Python",
+    "Ruby"
+  ],
+  "legacy_runner_source": "occurframe/corpus legacy/phase2-rc1/runners",
+  "new_adapter_paths": {
+    "Go": "runners/go/main.go",
+    "JavaScript": "runners/javascript/runner.mjs",
+    "PHP": "runners/php/runner.php",
+    "Python": "runners/python/runner.py",
+    "Ruby": "runners/ruby/runner.rb"
+  },
+  "outcome_counts": {
+    "occurrences": 70,
+    "rejection": 31,
+    "unsupported": 30
+  },
+  "protocol_failures": 0,
+  "protocol_version": "2.0",
+  "representative_vectors_executed": [
+    "CRON-ANCH-001",
+    "CRON-DAYF-001",
+    "CRON-DST-001",
+    "CRON-INV-001",
+    "RRULE-CORE-001",
+    "RRULE-CORE-016",
+    "RRULE-CORE-017",
+    "TZDB-001"
+  ],
+  "runner_failures": 0,
+  "semantic_observation_digest": "f181113b9600ac7031a53db38267a0a0e88a1bd6a56bfcf6ee01e9c3f4377cee",
+  "timeouts": 0,
+  "unsupported_cases": 30
+}

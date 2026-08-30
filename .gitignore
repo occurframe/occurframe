@@ -1,4 +1,13 @@
 /target/
 /dist/
 /research/
+/runners/go/.gopath/
+/runners/go/bin/
+/runners/javascript/node_modules/
+/runners/php/.adapter-deps/
+/runners/python/.venv/
+/runners/ruby/.adapter-deps/
+/smoke-artifacts/
+__pycache__/
+*.pyc
 *.tmp

@@ -1,0 +1,10 @@
+{
+  "repositories": [
+    {"directory":".adapter-deps/fugit","repository":"https://github.com/floraison/fugit.git","commit":"efda655251c2ae86780f7e472a61653b5b4b528b"},
+    {"directory":".adapter-deps/et-orbi","repository":"https://github.com/floraison/et-orbi.git","commit":"4725bc964c76bc8752abaff684944b404b49fbec"},
+    {"directory":".adapter-deps/raabro","repository":"https://github.com/floraison/raabro.git","commit":"af88c0117167538257de731af547ef5e8ce287db"},
+    {"directory":".adapter-deps/ice_cube","repository":"https://github.com/seejohnrun/ice_cube.git","commit":"32ff145baf152ae4aa130376d66041eba174b085"},
+    {"directory":".adapter-deps/tzinfo","repository":"https://github.com/tzinfo/tzinfo.git","commit":"ca5752c4b17501b6e08622a9428bca1ceea41e42"},
+    {"directory":".adapter-deps/concurrent-ruby","repository":"https://github.com/ruby-concurrency/concurrent-ruby.git","commit":null,"status":"unrecorded_in_phase2"}
+  ]
+}
