@@ -4,6 +4,10 @@ on:
   workflow_dispatch:
   schedule:
     - cron: "17 4 * * 2"
+  push:
+    branches: [dev]
+    paths:
+      - .github/workflows/adapter-certification.yml
 
 jobs:
   migrated-adapters:
