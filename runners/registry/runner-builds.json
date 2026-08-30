@@ -752,7 +752,7 @@
       "runtime_name": "Bun",
       "runtime_requirement": "1.3.13",
       "launch": {
-        "program": "runners/javascript/node_modules/bun/bin/bun.exe",
+        "program": "runners/javascript/node_modules/bun/bin/bun",
         "arguments": [
           "runners/javascript/runner.mjs",
           "--engine",
@@ -810,7 +810,7 @@
       "runtime_name": "Bun",
       "runtime_requirement": "1.3.13",
       "launch": {
-        "program": "runners/javascript/node_modules/bun/bin/bun.exe",
+        "program": "runners/javascript/node_modules/bun/bin/bun",
         "arguments": [
           "runners/javascript/runner.mjs",
           "--engine",
@@ -868,7 +868,7 @@
       "runtime_name": "Bun",
       "runtime_requirement": "1.3.13",
       "launch": {
-        "program": "runners/javascript/node_modules/bun/bin/bun.exe",
+        "program": "runners/javascript/node_modules/bun/bin/bun",
         "arguments": [
           "runners/javascript/runner.mjs",
           "--engine",
@@ -928,7 +928,7 @@
       "runtime_name": "Bun",
       "runtime_requirement": "1.3.13",
       "launch": {
-        "program": "runners/javascript/node_modules/bun/bin/bun.exe",
+        "program": "runners/javascript/node_modules/bun/bin/bun",
         "arguments": [
           "runners/javascript/runner.mjs",
           "--engine",
@@ -988,7 +988,7 @@
       "runtime_name": "Bun",
       "runtime_requirement": "1.3.13",
       "launch": {
-        "program": "runners/javascript/node_modules/bun/bin/bun.exe",
+        "program": "runners/javascript/node_modules/bun/bin/bun",
         "arguments": [
           "runners/javascript/runner.mjs",
           "--engine",
@@ -1046,7 +1046,7 @@
       "runtime_name": "Bun",
       "runtime_requirement": "1.3.13",
       "launch": {
-        "program": "runners/javascript/node_modules/bun/bin/bun.exe",
+        "program": "runners/javascript/node_modules/bun/bin/bun",
         "arguments": [
           "runners/javascript/runner.mjs",
           "--engine",
@@ -1427,6 +1427,7 @@
       "reproducibility": {
         "status": "unreproducible",
         "setup": "exact git checkouts in runners/ruby/setup.lock.json",
+        "reason_code": "unreproducible_provenance",
         "reason": "Phase II provenance did not record the concurrent-ruby commit required by tzinfo; no substitute version is permitted"
       },
       "legacy_source": "occurframe/corpus legacy/phase2-rc1/runners/run_ruby.rb"
@@ -1483,6 +1484,7 @@
       "reproducibility": {
         "status": "unreproducible",
         "setup": "exact git checkouts in runners/ruby/setup.lock.json",
+        "reason_code": "unreproducible_provenance",
         "reason": "Phase II provenance did not record the concurrent-ruby commit required by tzinfo; no substitute version is permitted"
       },
       "legacy_source": "occurframe/corpus legacy/phase2-rc1/runners/run_ruby.rb"

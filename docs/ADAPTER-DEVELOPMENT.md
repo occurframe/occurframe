@@ -39,6 +39,13 @@ Send all logging to stderr. Do not include duration, process identifiers,
 timestamps, or absolute paths in protocol messages. Do not implement an internal
 soft timeout as the authority: Rust owns hard containment after `started`.
 
+For `cron.parse` and `rrule.parse`, successful validation is reported as
+`accepted`; an adapter must not expose a subsequently generated occurrence
+array as the result of a parse operation. Deliberate parser failures remain
+`rejection`. This is especially important for syntax such as Jenkins `H`, where
+a parser may internally choose a process-random hash value even though the only
+observable question in a parse case is acceptance.
+
 ## Provenance and reproducibility
 
 Pin the exact engine version/tag/commit, runner version, expected runtime, package

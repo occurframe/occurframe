@@ -52,6 +52,8 @@ pub struct Reproducibility {
     pub status: ReproducibilityStatus,
     pub setup: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub reason_code: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub reason: Option<String>,
 }
 
@@ -120,6 +122,18 @@ impl RunnerBuild {
         }
         if hello.runtime.language != self.language || hello.runtime.runtime != self.runtime_name {
             return Err("runtime language/name differs from configuration".into());
+        }
+        // The runtime version is part of the build's identity, not an
+        // informational field. A configuration that pins CPython 3.11.15 is not
+        // satisfied by CPython 3.13.5, and a configuration that pins PHP 8.4.21
+        // is not satisfied by PHP 8.4.24. Recording the observed version without
+        // enforcing it would let an unpinned interpreter silently produce
+        // evidence attributed to a pinned one.
+        if hello.runtime.version != self.runtime_requirement {
+            return Err(format!(
+                "runtime version mismatch: configured {}, observed {}",
+                self.runtime_requirement, hello.runtime.version
+            ));
         }
         if hello.capabilities != self.supported_operations {
             return Err("capability declaration differs from configuration".into());
@@ -193,6 +207,12 @@ impl RunnerRegistry {
                     build.build_id
                 )));
             }
+            if build.runtime_requirement.trim().is_empty() {
+                return Err(Error::Configuration(format!(
+                    "{} must pin an exact runtime version",
+                    build.build_id
+                )));
+            }
             if build.supported_operations.is_empty()
                 || build.allowed_tzdb_release_kinds.is_empty()
                 || build.representative_vectors.is_empty()
@@ -202,13 +222,20 @@ impl RunnerRegistry {
                     build.build_id
                 )));
             }
-            if build.reproducibility.status == ReproducibilityStatus::Unreproducible
-                && build.reproducibility.reason.is_none()
-            {
-                return Err(Error::Configuration(format!(
-                    "{} is unreproducible without a reason",
-                    build.build_id
-                )));
+            if build.reproducibility.status == ReproducibilityStatus::Unreproducible {
+                if build.reproducibility.reason_code.as_deref() != Some("unreproducible_provenance")
+                {
+                    return Err(Error::Configuration(format!(
+                        "{} must identify unreproducible_provenance explicitly",
+                        build.build_id
+                    )));
+                }
+                if build.reproducibility.reason.is_none() {
+                    return Err(Error::Configuration(format!(
+                        "{} is unreproducible without a reason",
+                        build.build_id
+                    )));
+                }
             }
         }
         Ok(())

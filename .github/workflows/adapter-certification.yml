@@ -45,7 +45,9 @@ jobs:
 
       - name: Restore pinned JavaScript builds
         working-directory: runners/javascript
-        run: npm ci
+        run: |
+          npm ci
+          ln -sf "$(command -v bun)" node_modules/bun/bin/bun
 
       - uses: actions/setup-go@v5
         with:

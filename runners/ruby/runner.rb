@@ -124,7 +124,9 @@ $stdin.each_line do |line|
           "unsupported_operation", "#{engine_name} does not implement #{operation}") }
       else
         begin
-          { "type" => "occurrences", "occurrences" => engine[:run].call(vector) }
+          occurrences = engine[:run].call(vector)
+          operation.end_with?(".parse") ? { "type" => "accepted" } :
+            { "type" => "occurrences", "occurrences" => occurrences }
         rescue ArgumentError, RangeError => exception
           { "type" => "rejection", "diagnostic" => diagnostic(
             "native_rejection", "#{exception.class}: #{exception.message}") }

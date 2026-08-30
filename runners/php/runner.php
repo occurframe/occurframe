@@ -163,15 +163,31 @@ while (($line = fgets(STDIN)) !== false) {
             $outcome = ['type' => 'unsupported', 'diagnostic' => diagnostic(
                 'unsupported_operation', "$engineName does not implement $operation")];
         } else {
+            // Third-party libraries may print warnings or debugging text even
+            // when their API ultimately returns or throws. Protocol stdout is
+            // an NDJSON channel, so contain native output and forward only a
+            // bounded diagnostic copy to stderr. This does not alter the
+            // engine result or participate in scoring.
+            ob_start();
             try {
-                $occurrences = ($engine['run'])($vector);
-                $outcome = ['type' => 'occurrences', 'occurrences' => $occurrences];
-            } catch (InvalidArgumentException | OutOfRangeException | DomainException $exception) {
-                $outcome = ['type' => 'rejection', 'diagnostic' => diagnostic(
-                    'native_rejection', get_class($exception) . ': ' . $exception->getMessage())];
-            } catch (Throwable $exception) {
-                $outcome = ['type' => 'engine_error', 'diagnostic' => diagnostic(
-                    'native_exception', get_class($exception) . ': ' . $exception->getMessage())];
+                try {
+                    $occurrences = ($engine['run'])($vector);
+                    $outcome = str_ends_with($operation, '.parse')
+                        ? ['type' => 'accepted']
+                        : ['type' => 'occurrences', 'occurrences' => $occurrences];
+                } catch (InvalidArgumentException | OutOfRangeException | DomainException $exception) {
+                    $outcome = ['type' => 'rejection', 'diagnostic' => diagnostic(
+                        'native_rejection', get_class($exception) . ': ' . $exception->getMessage())];
+                } catch (Throwable $exception) {
+                    $outcome = ['type' => 'engine_error', 'diagnostic' => diagnostic(
+                        'native_exception', get_class($exception) . ': ' . $exception->getMessage())];
+                }
+            } finally {
+                $nativeOutput = (string)ob_get_clean();
+                if ($nativeOutput !== '') {
+                    fwrite(STDERR, 'native stdout: ' . substr($nativeOutput, -2000));
+                    if (!str_ends_with($nativeOutput, "\n")) fwrite(STDERR, "\n");
+                }
             }
         }
         emit(['message' => 'result', 'protocol_version' => PROTOCOL_VERSION,

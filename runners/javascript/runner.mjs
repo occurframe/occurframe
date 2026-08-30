@@ -180,7 +180,10 @@ for await (const line of input) {
       outcome = { type: 'unsupported', diagnostic: diagnostic('unsupported_operation', `${ENGINE_NAME} does not implement ${operation}`) }
     } else {
       try {
-        outcome = { type: 'occurrences', occurrences: engine.run(vector) }
+        const occurrences = engine.run(vector)
+        outcome = operation.endsWith('.parse')
+          ? { type: 'accepted' }
+          : { type: 'occurrences', occurrences }
       } catch (error) {
         const name = error?.constructor?.name ?? 'Error'
         const deliberate = ['Error', 'RangeError', 'TypeError', 'String'].includes(name)

@@ -46,7 +46,7 @@ type diagnostic struct {
 
 type outcome struct {
 	Type        string      `json:"type"`
-	Occurrences []string    `json:"occurrences,omitempty"`
+	Occurrences *[]string   `json:"occurrences,omitempty"`
 	Diagnostic  *diagnostic `json:"diagnostic,omitempty"`
 }
 
@@ -278,10 +278,14 @@ func main() {
 		} else {
 			occurrences, runError := selected.run(message.Vector)
 			if runError == nil {
-				if occurrences == nil {
-					occurrences = []string{}
+				if strings.HasSuffix(operation, ".parse") {
+					terminal = outcome{Type: "accepted"}
+				} else {
+					if occurrences == nil {
+						occurrences = []string{}
+					}
+					terminal = outcome{Type: "occurrences", Occurrences: &occurrences}
 				}
-				terminal = outcome{Type: "occurrences", Occurrences: occurrences}
 			} else {
 				var panicError enginePanic
 				if errors.As(runError, &panicError) {

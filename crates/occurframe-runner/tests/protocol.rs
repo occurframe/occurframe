@@ -67,6 +67,7 @@ fn build(mode: &str) -> RunnerBuild {
         reproducibility: Reproducibility {
             status: ReproducibilityStatus::Reproducible,
             setup: "cargo test".into(),
+            reason_code: None,
             reason: None,
         },
         legacy_source: "test fixture".into(),
@@ -180,6 +181,7 @@ fn protocol_and_identity_faults_are_runner_failures() {
         "wrong-protocol",
         "wrong-runner",
         "wrong-engine",
+        "wrong-runtime-version",
         "malformed-hello",
         "malformed-result",
         "stdout-contamination",

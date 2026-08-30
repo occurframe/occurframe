@@ -295,7 +295,8 @@ def main():
                       "request_id": request_id})
                 try:
                     occurrences = engine.run(vector)
-                    outcome = {"type": "occurrences", "occurrences": occurrences}
+                    outcome = ({"type": "accepted"} if operation.endswith(".parse") else
+                               {"type": "occurrences", "occurrences": occurrences})
                 except NotImplementedError as exception:
                     outcome = {"type": "unsupported", "diagnostic": diagnostic(
                         "unsupported_capability", exception)}

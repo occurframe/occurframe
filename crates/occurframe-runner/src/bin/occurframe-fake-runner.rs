@@ -34,6 +34,7 @@ fn main() {
         "wrong-protocol" => hello["protocol_version"] = json!("1.0"),
         "wrong-runner" => hello["runner"]["name"] = json!("impostor"),
         "wrong-engine" => hello["engine"]["name"] = json!("impostor"),
+        "wrong-runtime-version" => hello["runtime"]["version"] = json!("not-the-pinned-version"),
         _ => {}
     }
     emit(&hello);
