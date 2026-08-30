@@ -497,6 +497,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "occurframe-runner"
+version = "0.1.0"
+dependencies = [
+ "jsonschema",
+ "occurframe-conformance",
+ "occurframe-wire",
+ "serde",
+ "serde_json",
+ "sha2",
+ "thiserror",
+]
+
+[[package]]
 name = "occurframe-wire"
 version = "0.1.0"
 dependencies = [
@@ -968,6 +981,8 @@ name = "xtask"
 version = "0.1.0"
 dependencies = [
  "occurframe-conformance",
+ "occurframe-runner",
+ "occurframe-wire",
  "serde",
  "serde_json",
 ]

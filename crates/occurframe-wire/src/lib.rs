@@ -160,7 +160,6 @@ pub enum TzdbRelease {
 
 /// Normalized tzdb provenance; source and confidence are mechanically distinct.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
 pub struct TzdbProvenance {
     pub source: String,
     #[serde(flatten)]
@@ -357,6 +356,37 @@ mod tests {
             encoded["occurrences"],
             serde_json::json!(["later", "earlier", "earlier"])
         );
+    }
+
+    #[test]
+    fn tzdb_provenance_round_trips_through_wire_json() {
+        for provenance in [
+            TzdbProvenance {
+                source: "package".into(),
+                release: TzdbRelease::Exact {
+                    release: "2026a".into(),
+                },
+                fingerprint: None,
+            },
+            TzdbProvenance {
+                source: "runtime ICU".into(),
+                release: TzdbRelease::Bounded {
+                    min_inclusive: None,
+                    max_inclusive: Some("2026a".into()),
+                },
+                fingerprint: Some("fixture".into()),
+            },
+            TzdbProvenance {
+                source: "system zoneinfo".into(),
+                release: TzdbRelease::Unknown,
+                fingerprint: None,
+            },
+        ] {
+            let json = serde_json::to_value(&provenance).expect("serialize provenance");
+            let decoded: TzdbProvenance =
+                serde_json::from_value(json).expect("deserialize provenance");
+            assert_eq!(decoded, provenance);
+        }
     }
 
     #[test]
