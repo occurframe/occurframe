@@ -8,6 +8,9 @@ on:
     branches: [dev]
     paths:
       - .github/workflows/adapter-certification.yml
+      - runners/**
+      - crates/occurframe-runner/**
+      - xtask/**
 
 jobs:
   migrated-adapters:
