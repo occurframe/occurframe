@@ -2,6 +2,10 @@ name: Release Candidate Packaging
 
 on:
   workflow_dispatch:
+  push:
+    branches: [dev]
+    paths:
+      - .github/workflows/release-candidate.yml
 
 permissions:
   contents: read
