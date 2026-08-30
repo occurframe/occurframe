@@ -1,0 +1,16 @@
+[package]
+name = "occurframe-wire"
+description = "Language-neutral wire types for the Occurframe conformance oracle"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+
+[lints]
+workspace = true
+
