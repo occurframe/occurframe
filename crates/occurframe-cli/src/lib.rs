@@ -1087,6 +1087,10 @@ mod tests {
         );
         assert_eq!(lock.vector_count, 184);
         assert_eq!(
+            lock.expected_source_revision,
+            "cd6569c9f57c9eb8f087f1a18c08f23baa747bde"
+        );
+        assert_eq!(
             lock.corpus_repository,
             "https://github.com/occurframe/corpus"
         );

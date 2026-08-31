@@ -10,7 +10,7 @@
   "corpus": {
     "repository": "https://github.com/occurframe/corpus",
     "branch": "dev",
-    "expected_source_revision": "cf45a0bbcb7bbb1d37e03652d49841ee106bcc6b",
+    "expected_source_revision": "cd6569c9f57c9eb8f087f1a18c08f23baa747bde",
     "canonical_digest": "c0a9cf0587c02ce5022cbb94d060e14d5b9d6f99c3210e512965f35062c4dfe0",
     "corpus_version": "1.0.0-rc3",
     "authority": "read_only_normative",

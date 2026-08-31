@@ -23,7 +23,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: occurframe/corpus
-          ref: cf45a0bbcb7bbb1d37e03652d49841ee106bcc6b
+          ref: cd6569c9f57c9eb8f087f1a18c08f23baa747bde
           path: corpus
 
       - uses: dtolnay/rust-toolchain@stable
