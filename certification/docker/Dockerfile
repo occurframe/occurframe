@@ -1,8 +1,8 @@
 # syntax=docker/dockerfile:1.7
 #
-# Canonical Occurframe RC2 differential-certification environment.
+# Canonical Occurframe RC3 differential-certification environment.
 #
-# This image is the *only* sanctioned place the official RC2 evidence set is
+# This image is the *only* sanctioned place the official RC3 evidence set is
 # measured. It exists so that the certification profile's declared canonical
 # platform (Ubuntu 24.04 x86_64) is a reproducible artifact rather than an
 # assertion about somebody's laptop.

@@ -27,6 +27,13 @@ jobs:
           ref: cd6569c9f57c9eb8f087f1a18c08f23baa747bde
           path: corpus
 
+      # This is a separately attributed, read-only authority checkout. It is
+      # excluded from the tooling status check and from the Docker build
+      # context; certify.ps1 verifies its own Git status and revision.
+      - name: Isolate corpus checkout from tooling source identity
+        shell: bash
+        run: echo /corpus/ >> .git/info/exclude
+
       - uses: dtolnay/rust-toolchain@stable
 
       - name: Validate corpus authority before measurement
