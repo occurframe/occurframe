@@ -105,7 +105,7 @@ implementation exposes, not a library this release ships.
 | [Interpreting results](docs/INTERPRETING-RESULTS.md) | What each verdict does and does not mean |
 | [Releases](docs/RELEASES.md) | Release contents, provenance, reproducibility |
 | [Known contradictions](docs/KNOWN-CONTRADICTIONS.md) | Product tensions and how they were settled |
-| [V1 readiness](docs/V1-READINESS.md) | What stands between this and an owner-reviewed prerelease |
+| [V1 readiness](docs/V1-READINESS.md) | The hosted gate this prerelease passed, and what is deliberately left open |
 | [Architecture](docs/ARCHITECTURE.md) · [Runner architecture](docs/RUNNER-ARCHITECTURE.md) · [Differential certification](docs/DIFFERENTIAL-CERTIFICATION.md) · [Development](docs/DEVELOPMENT.md) | Internals and contribution |
 
 `examples/minimal-runner/` is a complete, runnable protocol example — a protocol

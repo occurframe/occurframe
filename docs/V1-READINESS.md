@@ -3,67 +3,75 @@
 **Question this document answers:** *is the implementation technically ready for
 an owner-reviewed public prerelease after CI?*
 
-**Answer: not yet — one hosted-CI condition remains open.** Every locally
-executable gate passes at `0.1.0-rc2`, the last doctrine contradiction is
-formally resolved, and the release artifact assembles deterministically from
-digest-verified inputs. Hosted CI has run against RC2 and found one genuine
-defect, in the durable evidence archive rather than in the oracle; that defect is
-fixed and its recurrence is now gated. What remains is a hosted run in which the
-whole four-platform matrix concludes green at one commit, which requires a push
-this environment cannot perform. Nothing found in this audit blocks the *oracle*
-itself.
+**Answer: READY FOR OWNER MERGE REVIEW.** Every gate this project defines has
+now concluded green in hosted CI against one commit: `cargo fmt`, clippy at
+`-D warnings`, the test suite and documentation on Ubuntu, Windows and macOS;
+native binaries on all four release targets with alias smoke, path-leak audit
+and binary-reproducibility measurement; restoration of the durable certified
+evidence by an unprivileged process; two-pass deterministic assembly with
+identical trees, `SHA256SUMS` and archives; and the clean-room consumer suite
+against the transport archive on Windows x86_64, Linux x86_64, macOS arm64 and
+macOS x86_64. Nothing remains that implementation work can close.
 
 Note the scope: this is readiness for an **owner-reviewed public prerelease**, not
 for stable `1.0.0`. Stable v1 additionally needs the corpus to leave release-
 candidate status, which is a semantic-authority decision and not an
 implementation one.
 
-Items are classified **BLOCKING** (must be fixed before an owner-reviewed
-prerelease), **ACCEPTED_LIMITATION** (understood, documented, and not a defect to
-fix now), or **POST_V1**.
+Items are classified **ACCEPTED_LIMITATION** (understood, documented, and not a
+defect to fix now), **POST_V1**, or **OWNER_RELEASE_ACTION** (outside
+implementation, and deliberately not performed by CI).
 
 ---
 
-## BLOCKING
+## The hosted gate, and what it cost to pass
 
-### B-1 · The hosted four-platform matrix has not concluded green at RC2
+The gate is green. The whole history is recorded, not just the green run: three
+of these runs failed, and what they found matters more than the fact that the
+last one passed.
 
-The four-platform release-candidate workflow — platform builds, path-leak audit,
-binary-reproducibility measurement, two-pass deterministic assembly, and the
-clean-room consumer suite on Windows x86_64, Linux x86_64, macOS arm64 and macOS
-x86_64 — has now been executed against RC2, and has not yet concluded green.
+| Workflow | Run | Commit | Result |
+| --- | --- | --- | --- |
+| Release Candidate Packaging | `33342029682` | `83f1a1a` | All four platform jobs failed comparing multi-line alias output. PowerShell's comparison operators *filter* when the left operand is an array, so byte-identical multi-line output compared as unequal. Fixed in `9955aea`. |
+| Release Candidate Packaging | `33342714486` | `9955aea` | Four platform jobs passed; assembly failed restoring the locked certification evidence. Fixed in `391e3da`. |
+| Fast correctness CI | `33345389784` | `391e3da` | Windows clippy failed: the `cfg(not(unix))` half of the new readability guard is infallible, so `unnecessary_wraps` fired where no Unix job could see it. Fixed in `a61730d`. |
+| Fast correctness CI | `33347466238` | `a61730d` | **Success**, all three operating systems. |
+| **Fast correctness CI** | **`33348854318`** | **`d5807f2`** | **Success** — Ubuntu, Windows, macOS. |
+| **Release Candidate Packaging** | **`33348854321`** | **`d5807f2`** | **Success** — 4 platform jobs, deterministic assembly, 4 clean-room jobs, artifact uploaded. |
+| Corpus authority CI | `33342025361` | corpus `5790faa` | Success. |
 
-**What hosted CI has established so far.**
+**The evidence-restore failure was a real defect in the durable archive.**
+`certification/rc2-evidence.tar.gz` had been packed with `--mode='u=rw,go=r'`,
+which clears the search bit on the archived directory as well as on the files.
+`tar` extracts such an archive successfully and reports success; a process
+running as `root` then reads every file inside it, because `root` bypasses the
+missing bit. An unprivileged consumer — the hosted runner, and any ordinary user
+unpacking the published evidence — gets `EACCES` on the first file it opens.
+Every local reproduction ran as `root`, which is precisely why the defect
+survived to hosted CI. The archive is repacked with `--mode='u=rwX,go=rX'`, its
+content byte-identical and its per-file checksums unchanged, and
+`verify-evidence-archive --extracted` now checks the restored modes as well as
+the checksums, so a developer running as `root` fails exactly where a consumer
+would.
 
-| Run | Commit | Result |
-| --- | --- | --- |
-| `33342029682` | `83f1a1a` | All four platform jobs failed comparing multi-line alias output in PowerShell. Fixed in `9955aea`. |
-| `33342714486` | `9955aea` | All four platform jobs **passed**; assembly failed restoring the locked certification evidence. |
-| `33342025361` (corpus) | `5790faa` | Corpus authority CI **passed**. |
+**Gate evidence.**
 
-**The assembly failure was a real defect, and it was in the durable evidence
-archive itself.** `certification/rc2-evidence.tar.gz` had been packed with
-`--mode='u=rw,go=r'`, which clears the search bit on the archived directory as
-well as on the files. `tar` extracts such an archive successfully and reports
-success; a process running as `root` then reads every file inside it, because
-`root` bypasses the missing bit. An unprivileged consumer — the hosted runner,
-and any ordinary user unpacking the published evidence — gets `EACCES` on the
-first file it opens. Every local reproduction ran as `root`, which is precisely
-why the defect survived to hosted CI.
+```text
+tooling commit                d5807f2e030e66695ca37f27d32f7e12c27d5a43
+corpus commit                 5790faa3b886ff9ec3805283e218ea11a8c6dd24
+Fast correctness CI           run 33348854318 — success
+Release Candidate Packaging   run 33348854321 — success
+artifact                      occurframe-0.1.0-rc2 (33.3 MB)
+artifact content digest       sha256:b9419ad87cddc683a59f89a600abcbd5431ffe77b879d96b42ffdf5470dce9bb
+durable evidence archive      sha256:98d9282ca54f6249bc70be7bce42f5cd637399f64f7d0c276235e9317764e18a
+semantic certification digest 1f592fdce4f9641406afb76383ff10585b5764dcfd097e595912c9a01cce98e1
+corpus canonical digest       4804772d20fb36c7329b2c5f2f28e264d9bc00b11e407e76d9836fc38cd80470
+```
 
-**Resolution.** The archive is repacked with `--mode='u=rwX,go=rX'` (directories
-`0755`, files `0644`), its content byte-identical and its per-file checksums
-unchanged; its digest is re-pinned in `release/evidence-lock.json`. So that the
-class of defect cannot recur silently, `xtask verify-evidence-archive
---extracted` now checks the restored modes as well as the checksums, so a
-developer running as `root` fails exactly where a consumer would.
-
-**Still outstanding:** a hosted run in which all four platform jobs, the
-deterministic assembly and all four clean-room jobs conclude green at the same
-commit. Until that is observed, four-platform status for RC2 is *unverified*,
-not *passing*.
-
-This is the only item standing between the current tree and an owner review.
+That artifact is **gate evidence, not the publication payload**. It was built
+from `d5807f2` on `dev`; the public prerelease must be rebuilt from the commit
+actually tagged after the merge, and its `release-manifest.json`
+`tooling_commit_sha` must equal that commit.
 
 ---
 
@@ -172,6 +180,43 @@ coverage, not an implementation task.
 
 ---
 
+## OWNER_RELEASE_ACTION
+
+Everything below is deliberately outside CI and outside implementation. CI
+merges nothing, tags nothing and publishes nothing, by design.
+
+### O-1 · Merge review
+
+Draft pull requests `dev → main` in both repositories, corpus first: the corpus
+is the semantic authority the tooling is measured against, so a tooling `main`
+that referenced an unmerged corpus would be provenance-incoherent.
+
+### O-2 · Rebuild the public artifact from the tagged commit
+
+The gate artifact was built from `d5807f2` on `dev`. After the merges, run
+Release Candidate Packaging from merged `main` and confirm the resulting
+`release-manifest.json` records that commit as `tooling_commit_sha`. A published
+archive whose manifest names a commit that was never tagged cannot be verified
+by a consumer, so the `dev` artifact must not be published.
+
+### O-3 · Tag and prerelease
+
+Tag `corpus-1.0.0-rc2` and `v0.1.0-rc2` — prerelease tags only, no stable tag —
+then a **draft** GitHub prerelease with the archive, its checksum and the
+attestation from the merged-`main` build, re-downloaded into a clean directory
+and clean-room verified before publication.
+
+### O-4 · The Apache-2.0-alone question
+
+A-2 records the dual licence accurately rather than narrowing it. Narrowing is
+an owner legal decision this audit does not make.
+
+### O-5 · Per-directory licensing of the corpus `legacy/` tree
+
+A-3, before the corpus is promoted to stable.
+
+---
+
 ## Explicit status of the items this audit was asked to confirm
 
 | Item | Status | Evidence |
@@ -180,20 +225,31 @@ coverage, not an implementation task.
 | Command doctrine | **Resolved by ERRATA-001.** v1 ships `test` alone. | `corpus/spec/ERRATA.md`; enforced by `release-package`, which refuses a lock declaring any other shipped surface, and by CLI and alias tests. |
 | Ruby builds | **ACCEPTED_LIMITATION (A-1).** | Public differential report; registry `unreproducible_provenance` entries. |
 | Licensing | **ACCEPTED_LIMITATION (A-2, A-3).** Recorded accurately; no owner legal decision made here. | `LICENSES.md`, `corpus/LICENSING.md`, `DEPENDENCIES.json`. |
-| Publication | **Owner-controlled, outside implementation.** | `docs/RELEASE-CHECKLIST.md`; CI publishes nothing, merges nothing and tags nothing. |
+| Publication | **OWNER_RELEASE_ACTION (O-1…O-3).** | `docs/RELEASE-CHECKLIST.md`; CI publishes nothing, merges nothing and tags nothing. |
+| Four-platform hosted gate | **Green at `d5807f2`.** | Release Candidate Packaging run `33348854321`: 4 platform jobs, deterministic assembly, 4 clean-room jobs, artifact `occurframe-0.1.0-rc2`. |
 
 ## Evidence for the readiness answer
 
-Locally executed at the RC2 commits, all passing: `cargo fmt --check`; `cargo
-clippy --workspace --all-targets -D warnings`; `cargo test --workspace`; `cargo
-doc --workspace --no-deps` with warnings denied; corpus validation and
-deterministic pack (184 vectors, canonical digest unchanged); durable
-certified-evidence archive verification, including per-file checksums and
-unprivileged readability after extraction; two-pass deterministic release
-assembly with identical file
-manifests, `SHA256SUMS` and archives; absolute-path audit clean; dependency and
-licence inventory regenerated and compared; the clean-room consumer suite against
-the packaged release on Linux.
+**Hosted, at `d5807f2`, all green.** Fast correctness CI (run `33348854318`) on
+Ubuntu, Windows and macOS: `cargo fmt --check`; `cargo clippy --workspace
+--all-targets -- -D warnings`; `cargo test --workspace`; `cargo doc --workspace
+--no-deps` with warnings denied; bundled-corpus identity and deterministic pack;
+the protocol-example smoke suite; dependency and licence inventory generation.
+Release Candidate Packaging (run `33348854321`): native binaries for
+`x86_64-unknown-linux-gnu`, `x86_64-pc-windows-msvc`, `aarch64-apple-darwin` and
+`x86_64-apple-darwin`, each with alias smoke, help/version equivalence, path-leak
+audit, staging and binary-reproducibility measurement; restoration of the durable
+certified evidence by an unprivileged runner, including its permission check,
+extracted `SHA256SUMS` and `certification-verify`; two-pass assembly with
+identical trees, `SHA256SUMS` and gzip archives; licence and dependency inventory
+validation against the packaged copies; the out-of-bundle attestation; and the
+clean-room consumer suite run against the transport archive on all four targets,
+in jobs that install no Rust toolchain and check out no corpus.
 
-Unverified pending owner push: the same clean-room suite on Windows, macOS arm64
-and macOS x86_64, and the per-target binary-reproducibility measurement (B-1).
+**Locally, at the same tree:** the same Rust gates, corpus validation and
+deterministic pack (184 vectors, canonical digest unchanged), evidence
+restoration including unprivileged readability, two-pass assembly, path audit,
+inventory comparison, and the clean-room suite on Linux — 120 of 120 checks.
+
+Not claimed: cross-machine binary reproducibility (A-5), which is measured and
+reported per target rather than asserted.
