@@ -137,11 +137,14 @@ implying colour exists.
 
 ### A-5 · Binary reproducibility is measured per release, not asserted
 
-Same-host rebuilds with the pinned toolchain and `--remap-path-prefix` produce
-byte-identical binaries, and CI measures and reports this per target. Cross-
-machine binary reproducibility is **not** claimed and has not been measured. The
-release notes claim only what was measured; manifest and archive reproducibility
-are separately verified and do hold.
+CI measures binary reproducibility per target; it is never inferred from
+deterministic semantic/package assembly or deterministic transport-archive
+assembly. Hosted same-host rebuilds have produced byte-identical binaries on
+Linux x86_64, macOS arm64 and macOS x86_64. The Windows x86_64 same-host rebuild
+produced different binary bytes. That result is informational and non-gating:
+release integrity is established by checksums, manifests, clean-room behaviour
+and platform-native build provenance. No broad cross-machine binary
+reproducibility claim is made.
 
 ---
 

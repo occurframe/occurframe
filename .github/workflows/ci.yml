@@ -38,18 +38,7 @@ jobs:
       # text/JSON/JUnit output and the protocol path, against a locally packed
       # corpus and the shipped example runner.
       - name: Protocol example smoke (aliases, determinism, exit domains)
-        shell: bash
-        run: |
-          cargo build --locked -p occurframe-cli --bins
-          cargo run --locked -p xtask -- pack --corpus corpus-authority --output packed-corpus
-          mkdir -p packed-corpus/schemas
-          cp corpus-authority/schemas/runner-protocol-v2.schema.json packed-corpus/schemas/
-          suffix=""
-          if [ "${RUNNER_OS}" = "Windows" ]; then suffix=".exe"; fi
-          python tests/example-runner/smoke.py \
-            --occurframe "target/debug/occurframe${suffix}" \
-            --oframe "target/debug/oframe${suffix}" \
-            --corpus packed-corpus
+        run: cargo run --locked -p xtask -- source-example-smoke --corpus corpus-authority
       # Generated inventories must be reproducible from the workspace itself.
       - name: Dependency and licence inventory generation
         run: cargo run --locked -p xtask -- dependency-inventory --manifest Cargo.toml --output dependencies.json --notices third-party-notices.md

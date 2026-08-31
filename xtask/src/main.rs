@@ -6,8 +6,8 @@ use std::{
 };
 
 use occurframe_conformance::{
-    canonical_pretty_json, load_and_validate_corpus, migrate_rc1, pack_release, sha256_hex,
-    verify_deterministic_pack, verify_manifest, verify_migration, write_tree_checksums,
+    PackReport, canonical_pretty_json, load_and_validate_corpus, migrate_rc1, pack_release,
+    sha256_hex, verify_deterministic_pack, verify_manifest, verify_migration, write_tree_checksums,
 };
 use occurframe_report::{
     BundleInput, CertificationManifest, DifferentialMatrix, generate_bundle, load_json,
@@ -74,6 +74,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                 "second_digest": second_digest
             }))?;
         }
+        "source-example-smoke" => source_example_smoke(&options.required("corpus")?)?,
         "verify-manifest" => {
             verify_manifest(&options.required("output")?)?;
             print_json(&serde_json::json!({"manifest_valid": true}))?;
@@ -960,6 +961,161 @@ fn runner_contract() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
+struct SourceExamplePreparation {
+    corpus: PackReport,
+    deterministic_digest: String,
+    protocol_schema: PathBuf,
+}
+
+/// Prepare the generated-corpus input required by the source example smoke.
+///
+/// The protocol schema is developer-runner infrastructure, not canonical corpus
+/// data, so the public corpus pack deliberately omits it. This helper stages it
+/// beside a fresh deterministic pack without changing the distribution format.
+fn prepare_source_example_corpus(
+    corpus_root: &Path,
+    packed_corpus: &Path,
+) -> Result<SourceExamplePreparation, Box<dyn std::error::Error>> {
+    if packed_corpus.exists() {
+        return Err(format!(
+            "source example smoke output already exists: {}",
+            packed_corpus.display()
+        )
+        .into());
+    }
+    let (first_digest, second_digest) = verify_deterministic_pack(corpus_root)?;
+    if first_digest != second_digest {
+        return Err("deterministic corpus pack digests differ".into());
+    }
+    let corpus = pack_release(corpus_root, packed_corpus)?;
+    verify_manifest(packed_corpus)?;
+
+    let source = corpus_root.join("schemas/runner-protocol-v2.schema.json");
+    if !source.is_file() {
+        return Err(format!("missing runner protocol schema: {}", source.display()).into());
+    }
+    let protocol_schema = packed_corpus.join("schemas/runner-protocol-v2.schema.json");
+    fs::create_dir_all(
+        protocol_schema
+            .parent()
+            .ok_or("runner protocol schema destination has no parent")?,
+    )?;
+    fs::copy(&source, &protocol_schema)?;
+    if fs::read(&source)? != fs::read(&protocol_schema)? {
+        return Err("staged runner protocol schema differs from corpus authority".into());
+    }
+    ProtocolSchema::load(&protocol_schema)?;
+
+    Ok(SourceExamplePreparation {
+        corpus,
+        deterministic_digest: first_digest,
+        protocol_schema,
+    })
+}
+
+fn source_example_smoke(corpus_root: &Path) -> Result<(), Box<dyn std::error::Error>> {
+    let repository_root = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .ok_or("xtask manifest directory has no workspace parent")?;
+    let target_directory = env::var_os("CARGO_TARGET_DIR").map_or_else(
+        || repository_root.join("target"),
+        |path| {
+            let path = PathBuf::from(path);
+            if path.is_absolute() {
+                path
+            } else {
+                repository_root.join(path)
+            }
+        },
+    );
+    let workspace = target_directory.join(format!("source-example-smoke-{}", std::process::id()));
+    if workspace.exists() {
+        fs::remove_dir_all(&workspace)?;
+    }
+    fs::create_dir_all(workspace.join("tmp"))?;
+
+    let result =
+        run_source_example_smoke(repository_root, corpus_root, &target_directory, &workspace);
+    let cleanup = fs::remove_dir_all(&workspace);
+    match (result, cleanup) {
+        (Err(error), _) => Err(error),
+        (Ok(()), Err(error)) => Err(error.into()),
+        (Ok(()), Ok(())) => Ok(()),
+    }
+}
+
+fn run_source_example_smoke(
+    repository_root: &Path,
+    corpus_root: &Path,
+    target_directory: &Path,
+    workspace: &Path,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let preparation = prepare_source_example_corpus(corpus_root, &workspace.join("packed-corpus"))?;
+
+    let cargo = env::var_os("CARGO").unwrap_or_else(|| "cargo".into());
+    let build = Command::new(cargo)
+        .current_dir(repository_root)
+        .args(["build", "--locked", "-p", "occurframe-cli", "--bins"])
+        .status()?;
+    if !build.success() {
+        return Err("failed to build source-checkout CLI binaries".into());
+    }
+
+    let executable_suffix = env::consts::EXE_SUFFIX;
+    let occurframe = target_directory
+        .join("debug")
+        .join(format!("occurframe{executable_suffix}"));
+    let oframe = target_directory
+        .join("debug")
+        .join(format!("oframe{executable_suffix}"));
+    if !occurframe.is_file() || !oframe.is_file() {
+        return Err(format!(
+            "source-checkout CLI binaries were not produced below {}",
+            target_directory.display()
+        )
+        .into());
+    }
+
+    let python = env::var_os("PYTHON").unwrap_or_else(|| {
+        if cfg!(windows) {
+            "python".into()
+        } else {
+            "python3".into()
+        }
+    });
+    let packed_corpus = workspace.join("packed-corpus");
+    let temporary_directory = workspace.join("tmp");
+    let runner_workspace = workspace.join("runner");
+    fs::create_dir_all(&runner_workspace)?;
+    let smoke = Command::new(python)
+        .current_dir(repository_root)
+        .arg(repository_root.join("tests/example-runner/smoke.py"))
+        .arg("--occurframe")
+        .arg(&occurframe)
+        .arg("--oframe")
+        .arg(&oframe)
+        .arg("--corpus")
+        .arg(&packed_corpus)
+        .arg("--workspace")
+        .arg(&runner_workspace)
+        .env("TEMP", &temporary_directory)
+        .env("TMP", &temporary_directory)
+        .env("TMPDIR", &temporary_directory)
+        .status()?;
+    if !smoke.success() {
+        return Err("source example runner smoke failed".into());
+    }
+
+    print_json(&serde_json::json!({
+        "canonical_corpus_digest": preparation.corpus.canonical_corpus_digest,
+        "deterministic_pack_digest": preparation.deterministic_digest,
+        "protocol_schema": preparation.protocol_schema,
+        "source_example_smoke": "passed",
+        "vectors": preparation.corpus.vector_count
+    }))?;
+    Ok(())
+}
+
 fn execute_smoke(
     builds: &[RunnerBuild],
     corpus_path: &Path,
@@ -1242,6 +1398,45 @@ mod tests {
         .expect_err("cross-repository drift must fail");
         assert!(error.to_string().contains("corpus declares 0.0.1-other"));
         fs::remove_dir_all(&directory).expect("remove isolated fixture directory");
+    }
+
+    #[test]
+    fn source_example_preparation_stages_schema_beside_a_fresh_pack() {
+        let workspace_root = Path::new(env!("CARGO_MANIFEST_DIR"))
+            .parent()
+            .expect("workspace root");
+        let corpus_root = env::var_os("OCCURFRAME_TEST_CORPUS").map_or_else(
+            || {
+                workspace_root
+                    .parent()
+                    .expect("project root")
+                    .join("corpus")
+            },
+            PathBuf::from,
+        );
+        let output = workspace_root
+            .join("target/xtask-source-example-preparation")
+            .join(std::process::id().to_string());
+        if output.exists() {
+            fs::remove_dir_all(&output).expect("remove stale isolated fixture directory");
+        }
+
+        let preparation = prepare_source_example_corpus(&corpus_root, &output)
+            .expect("prepare source example corpus");
+        assert_eq!(preparation.corpus.vector_count, 184);
+        assert_eq!(
+            preparation.corpus.canonical_corpus_digest,
+            "4804772d20fb36c7329b2c5f2f28e264d9bc00b11e407e76d9836fc38cd80470"
+        );
+        assert_eq!(
+            fs::read(corpus_root.join("schemas/runner-protocol-v2.schema.json"))
+                .expect("authority schema"),
+            fs::read(&preparation.protocol_schema).expect("staged schema")
+        );
+        verify_manifest(&output).expect("fresh pack manifest");
+        ProtocolSchema::load(&preparation.protocol_schema).expect("load staged protocol schema");
+
+        fs::remove_dir_all(&output).expect("remove isolated fixture directory");
     }
 
     /// Hosted CI runs unprivileged; a developer container often runs as `root`.

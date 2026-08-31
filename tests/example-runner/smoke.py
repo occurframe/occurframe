@@ -8,10 +8,10 @@ runner end to end against a locally packed corpus, using binaries built from the
 checkout, so a broken example or a broken protocol path fails in fast CI rather
 than at release time.
 
-    python3 tests/example-runner/smoke.py \\
-        --occurframe target/debug/occurframe \\
-        --oframe target/debug/oframe \\
-        --corpus /tmp/packed-corpus
+The supported developer entry point prepares every required input before
+invoking this internal harness:
+
+    cargo run --locked -p xtask -- source-example-smoke --corpus ../corpus
 """
 
 from __future__ import annotations
@@ -47,9 +47,15 @@ def main() -> int:
     parser.add_argument("--occurframe", required=True)
     parser.add_argument("--oframe", required=True)
     parser.add_argument("--corpus", required=True)
+    parser.add_argument("--workspace")
     arguments = parser.parse_args()
 
-    workspace = Path(tempfile.mkdtemp(prefix="occurframe-example-smoke-"))
+    workspace = (
+        Path(arguments.workspace)
+        if arguments.workspace
+        else Path(tempfile.mkdtemp(prefix="occurframe-example-smoke-"))
+    )
+    workspace.mkdir(parents=True, exist_ok=True)
     # The launch line names this interpreter explicitly, so the smoke test is
     # about the protocol rather than about whether `python3` is the interpreter's
     # name on this platform.

@@ -129,6 +129,12 @@ builder's absolute paths from panic metadata and removes a source of
 machine-to-machine variation. Any claim about binary reproducibility must come
 from that measurement; it is not assumed.
 
+For `0.1.0-rc2`, hosted same-host rebuilds measured byte-identical binaries on
+Linux x86_64, macOS arm64 and macOS x86_64, and different binary bytes on
+Windows x86_64. The Windows measurement is informational and non-gating.
+Checksums, manifests, clean-room behaviour and platform-native build provenance
+establish release integrity; no cross-machine bit-reproducibility claim is made.
+
 ## Dependency and licence inventory
 
 `xtask dependency-inventory` derives `DEPENDENCIES.json` and

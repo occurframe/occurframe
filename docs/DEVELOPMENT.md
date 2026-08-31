@@ -139,9 +139,15 @@ release and deliberately assumes no Cargo, Rust, Git or checkout on the consumer
 machine:
 
 ```text
-python3 tests/example-runner/smoke.py --occurframe target/debug/occurframe --oframe target/debug/oframe --corpus packed-corpus
+cargo run --locked -p xtask -- source-example-smoke --corpus ../corpus
 python3 tests/clean-room/verify_release.py --bundle dist/release/occurframe-0.1.0-rc2.tar.gz --target x86_64-unknown-linux-gnu
 ```
+
+`source-example-smoke` validates and deterministically packs the authored
+corpus, stages the runner-protocol schema required only by the source smoke,
+builds both CLI aliases, configures the bundled minimal runner, and executes the
+same end-to-end checks used by Fast CI. A separate schema-copy recipe is neither
+required nor supported.
 
 Source-package readiness: `occurframe-wire` and `occurframe-conformance` are
 publishable; `occurframe-cli`, `occurframe-report`, `occurframe-runner` and
