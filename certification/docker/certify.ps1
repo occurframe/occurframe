@@ -132,6 +132,12 @@ $runArgs = @(
     '--env', "OCCURFRAME_IMAGE_DIGEST=$imageId",
     '--env', "OCCURFRAME_BASE_IMAGE_DIGEST=$baseDigest",
     '--env', "OCCURFRAME_TOOLING_SHA=$ToolingSha",
+    # Git 2.35+ rejects a bind-mounted checkout owned by the host UID when the
+    # container runs as root. Trust only the fixed, read-only corpus mount; the
+    # conformance authority still verifies its cleanliness and exact revision.
+    '--env', 'GIT_CONFIG_COUNT=1',
+    '--env', 'GIT_CONFIG_KEY_0=safe.directory',
+    '--env', 'GIT_CONFIG_VALUE_0=/src-corpus',
     $Tag
 )
 
