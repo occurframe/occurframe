@@ -498,7 +498,12 @@ fn verify_extracted_evidence_is_readable_without_privilege(
 }
 
 /// Windows carries no POSIX mode bits, so there is nothing to prove there.
+///
+/// The fallible signature is the Unix one: both definitions are the same
+/// function to every caller, and narrowing this one to `()` would push a
+/// platform conditional into every call site.
 #[cfg(not(unix))]
+#[allow(clippy::unnecessary_wraps)]
 fn verify_extracted_evidence_is_readable_without_privilege(
     _directory: &Path,
 ) -> Result<(), Box<dyn std::error::Error>> {
