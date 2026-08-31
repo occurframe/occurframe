@@ -25,8 +25,8 @@ archive to a JUnit report in CI.
 
 A **vector** is one language-neutral recurring-time behaviour case: an input, the
 semantic context it must be read in, a classification, the normative evidence
-behind it, and an authored expectation. Occurframe `0.1.0-rc2` ships corpus
-`1.0.0-rc2` — 184 vectors across cron anchoring, day fields, day-of-week
+behind it, and an authored expectation. Occurframe tooling `0.1.0-rc3` consumes
+corpus `1.0.0-rc3` — 184 vectors across cron anchoring, day fields, day-of-week
 numbering, DST, extensions, field counts, invalid input, names and steps, plus
 RRULE core/BY-rules/sets/DST and timezone-database provenance.
 
@@ -57,15 +57,18 @@ same expression legitimately produces different answers depending on:
 
 Every result therefore carries engine name and version with provenance, runtime
 language/name/version, declared dialect IDs, declared semantic-profile claims,
-and tzdb provenance. Occurframe validates those declarations against the runner's
-`hello` before it will attribute a single observation to your engine.
+and tzdb provenance, plus the safe effective runner-environment policy. Occurframe
+validates those declarations against the runner's `hello` before it will
+attribute a single observation to your engine. Protocol 3.0 sends only an
+expectation-blind question projection; expected answers remain authority-only.
 
 ## The differential evidence
 
-The release republishes a certified differential run: 25 configured historical
+The immutable RC2 release evidence records a differential run of 25 configured historical
 engine builds, 23 of them reproducible, executed over all 184 vectors for 4,232
-observations. 163 vectors show semantic divergence between engines and 76 show a
-normative violation.
+observations. It does not certify corrected RC3 semantics or protocol 3.0. The
+current repository is **AWAITING RECERTIFICATION** and does not republish those
+historical figures as current RC3 evidence.
 
 **A divergence is not automatically a defect.** The corpus distinguishes
 normative answers from named policy differences, named dialect differences,
@@ -78,8 +81,8 @@ reading a matrix without over-claiming.
 
 ## What this prerelease is not
 
-`0.1.0-rc2` is a **prerelease**. It is not Occurframe v1.0, and the corpus is
-`1.0.0-rc2`, not stable `1.0.0`.
+`0.1.0-rc3` is prerelease tooling awaiting certification. It is not Occurframe
+v1.0, and corpus `1.0.0-rc3` is not stable `1.0.0`.
 
 **Occurframe v1 ships one semantic command: `test`.** That is the whole surface,
 and it is deliberate. Research II originally froze four command names, but three
@@ -101,11 +104,11 @@ implementation exposes, not a library this release ships.
 | --- | --- |
 | [Getting started](docs/GETTING-STARTED.md) | Verify an archive, run a first test, wire it into CI |
 | [CLI](docs/CLI.md) | Options, discovery, exit codes, environment variables |
-| [Writing a runner](docs/WRITING-A-RUNNER.md) | Integrating an engine over protocol `2.0` |
+| [Writing a runner](docs/WRITING-A-RUNNER.md) | Integrating an engine over expectation-blind protocol `3.0` |
 | [Interpreting results](docs/INTERPRETING-RESULTS.md) | What each verdict does and does not mean |
 | [Releases](docs/RELEASES.md) | Release contents, provenance, reproducibility |
 | [Known contradictions](docs/KNOWN-CONTRADICTIONS.md) | Product tensions and how they were settled |
-| [V1 readiness](docs/V1-READINESS.md) | The hosted gate this prerelease passed, and what is deliberately left open |
+| [V1 readiness](docs/V1-READINESS.md) | Current recertification status and the historical RC2 gate record |
 | [Architecture](docs/ARCHITECTURE.md) · [Runner architecture](docs/RUNNER-ARCHITECTURE.md) · [Differential certification](docs/DIFFERENTIAL-CERTIFICATION.md) · [Development](docs/DEVELOPMENT.md) | Internals and contribution |
 
 `examples/minimal-runner/` is a complete, runnable protocol example — a protocol

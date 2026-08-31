@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Occurframe runner protocol 2.0 — minimal integration example.
+"""Occurframe runner protocol 3.0 — minimal integration example.
 
 PROTOCOL EXAMPLE ONLY — NOT A RECURRENCE ENGINE AND NOT A CONFORMANCE
 REFERENCE. This program computes nothing. It replays a tiny, documented table
@@ -33,7 +33,7 @@ import sys
 from pathlib import Path
 from typing import Any, Dict
 
-PROTOCOL_VERSION = "2.0"
+PROTOCOL_VERSION = "3.0"
 
 # The identity below is asserted to Occurframe in `hello`, and Occurframe
 # refuses to attribute any observation to a build whose `hello` disagrees with
@@ -44,7 +44,7 @@ PROTOCOL_VERSION = "2.0"
 # `runner-builds.example.json` in step.
 RUNNER_IDENTITY = {
     "name": "occurframe-minimal-example-runner",
-    "version": "2.0.0",
+    "version": "3.0.0",
     "provenance": "source:examples/minimal-runner/runner.py",
 }
 ENGINE_IDENTITY = {
@@ -130,7 +130,7 @@ def outcome_for(vector: Dict[str, Any], fixtures: Dict[str, Any]) -> Dict[str, A
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="Occurframe protocol-v2 integration example (not an engine)."
+        description="Occurframe protocol-v3 integration example (not an engine)."
     )
     parser.add_argument(
         "--fixtures",
@@ -185,7 +185,16 @@ def main() -> int:
                 "message": "result",
                 "protocol_version": PROTOCOL_VERSION,
                 "request_id": request_id,
-                "outcome": outcome_for(message["vector"], fixtures),
+                "outcome": outcome_for(
+                    {
+                        "id": message["vector_id"],
+                        "family": message["family"],
+                        "operation": message["operation"],
+                        "input": message["input"],
+                        "context": message["semantic_context"],
+                    },
+                    fixtures,
+                ),
                 "warnings": [],
             }
         )

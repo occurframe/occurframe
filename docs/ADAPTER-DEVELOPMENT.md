@@ -8,7 +8,7 @@
 An adapter is intentionally small:
 
 ```text
-protocol vector -> native engine call -> native result -> protocol-v2 result
+expectation-blind case -> native engine call -> native result -> protocol-v3 result
 ```
 
 It does not read expectations, score itself, repair ordering, choose the dialect
@@ -17,19 +17,21 @@ entry to `runners/registry/runner-builds.json` for every engine/configuration.
 Dialect IDs are permanent corpus registry IDs; a bare `cron-compatible` claim is
 invalid. One running process must never switch engine identity.
 
-## Implementing protocol 2.0
+## Implementing protocol 3.0
 
 On startup, write exactly one `hello` line and flush it. It contains:
 
 ```json
-{"message":"hello","protocol_version":"2.0","runner":{"name":"example-runner","version":"2.0.0","provenance":"source pin"},"engine":{"name":"example-engine","version":"1.2.3","provenance":"tag/commit/hash"},"runtime":{"language":"Example","runtime":"ExampleVM","version":"4.5.6"},"capabilities":["cron.next"],"dialect_ids":["cron.vixie@1"],"semantic_profile_claims":{},"tzdb_provenance":{"source":"system zoneinfo","release_kind":"unknown"}}
+{"message":"hello","protocol_version":"3.0","runner":{"name":"example-runner","version":"3.0.0","provenance":"source pin"},"engine":{"name":"example-engine","version":"1.2.3","provenance":"tag/commit/hash"},"runtime":{"language":"Example","runtime":"ExampleVM","version":"4.5.6"},"capabilities":["cron.next"],"dialect_ids":["cron.vixie@1"],"semantic_profile_claims":{},"tzdb_provenance":{"source":"system zoneinfo","release_kind":"unknown"}}
 ```
 
-Read one `case` line at a time. The vector is already corpus-validated. Immediately
+Read one `case` line at a time. It is a typed, corpus-validated question projection
+that contains `vector_id`, `family`, `operation`, `input`, and
+`semantic_context`; it never contains expectations or authority metadata. Immediately
 before the native engine operation, write and flush:
 
 ```json
-{"message":"started","protocol_version":"2.0","request_id":"the-case-id"}
+{"message":"started","protocol_version":"3.0","request_id":"the-case-id"}
 ```
 
 Then emit exactly one `result` with the same request ID. Preserve the native
@@ -67,7 +69,7 @@ the concurrent-ruby commit.
 ## Verification
 
 Run `cargo run -p xtask -- runner-contract` first. Then use `runner-smoke` with
-the build ID and corpus protocol schema. The representative IDs are existing RC2
+the build ID and corpus protocol schema. The representative IDs are existing RC3
 vectors selected in `runners/fixtures/representative-vectors.json`; this file is
 adapter test configuration, not another corpus. Successful plumbing does not
 assert engine quality, and a semantic disagreement is not an adapter defect

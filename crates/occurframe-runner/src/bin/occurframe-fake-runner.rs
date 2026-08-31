@@ -21,8 +21,8 @@ fn main() {
     }
     let mut hello = json!({
         "message": "hello",
-        "protocol_version": "2.0",
-        "runner": {"name": "fake-runner", "version": "2.0.0", "provenance": "test fixture"},
+        "protocol_version": "3.0",
+        "runner": {"name": "fake-runner", "version": "3.0.0", "provenance": "test fixture"},
         "engine": {"name": "fake-engine", "version": "1.0.0", "provenance": "test fixture"},
         "runtime": {"language": "Rust", "runtime": "rust-test", "version": "deterministic"},
         "capabilities": ["cron.next", "cron.parse"],
@@ -49,7 +49,7 @@ fn main() {
             return;
         };
         let request_id = case["request_id"].as_str().unwrap_or("missing");
-        let vector_id = case["vector"]["id"].as_str().unwrap_or("missing");
+        let vector_id = case["vector_id"].as_str().unwrap_or("missing");
 
         if mode == "exit-before-started"
             || (mode == "restart-failure" && vector_id.ends_with("001"))
@@ -70,7 +70,7 @@ fn main() {
         }
         emit(&json!({
             "message": "started",
-            "protocol_version": "2.0",
+            "protocol_version": "3.0",
             "request_id": request_id
         }));
 
@@ -110,6 +110,21 @@ fn main() {
                 json!({"type": "occurrences", "occurrences": ["later", "earlier", "earlier"]}),
                 vec![],
             ),
+            "cheat" if contains_authority_data(&case) => (
+                json!({"type": "occurrences", "occurrences": ["CHEAT_EXPECTED_SENTINEL"]}),
+                vec![],
+            ),
+            "cheat" => (
+                diagnostic_outcome("engine_error", "authority_data_absent"),
+                vec![],
+            ),
+            "environment" if hermetic_environment_is_effective() => {
+                (json!({"type": "accepted"}), vec![])
+            }
+            "environment" => (
+                diagnostic_outcome("engine_error", "environment_policy_violation"),
+                vec![],
+            ),
             _ => (
                 json!({"type": "occurrences", "occurrences": ["observed"]}),
                 vec![],
@@ -117,12 +132,45 @@ fn main() {
         };
         emit(&json!({
             "message": "result",
-            "protocol_version": "2.0",
+            "protocol_version": "3.0",
             "request_id": request_id,
             "outcome": outcome,
             "warnings": warnings
         }));
     }
+}
+
+fn contains_authority_data(value: &Value) -> bool {
+    match value {
+        Value::Object(object) => object.iter().any(|(key, value)| {
+            matches!(
+                key.as_str(),
+                "expectation"
+                    | "expectations"
+                    | "classification"
+                    | "normative_evidence"
+                    | "rationale"
+                    | "tags"
+                    | "semantic_axes"
+                    | "scoring_mode"
+                    | "admissible_answers"
+            ) || contains_authority_data(value)
+        }),
+        Value::Array(values) => values.iter().any(contains_authority_data),
+        Value::String(value) => value.contains("CHEAT_EXPECTED_SENTINEL"),
+        _ => false,
+    }
+}
+
+fn hermetic_environment_is_effective() -> bool {
+    env::var("TZ").as_deref() == Ok("UTC")
+        && env::var("LANG").as_deref() == Ok("C")
+        && env::var("LC_ALL").as_deref() == Ok("C")
+        && env::var("OCCURFRAME_DECLARED_SENTINEL").as_deref() == Ok("declared")
+        && env::var_os("HOME").is_none()
+        && env::var_os("PATH").is_none()
+        && env::var_os("LC_TIME").is_none()
+        && env::var_os("OCCURFRAME_UNDECLARED_SECRET").is_none()
 }
 
 fn diagnostic_outcome(kind: &str, code: &str) -> Value {

@@ -133,7 +133,8 @@ mod tests {
     use std::collections::BTreeMap;
 
     use occurframe_wire::{
-        ComponentIdentity, DialectId, RuntimeIdentity, SemanticValue, TzdbProvenance, TzdbRelease,
+        ComponentIdentity, DialectId, LaunchResolutionMethod, RunnerEnvironmentProvenance,
+        RuntimeIdentity, SemanticValue, TzdbProvenance, TzdbRelease,
     };
 
     use super::*;
@@ -151,8 +152,8 @@ mod tests {
         outcome: Option<EngineOutcome>,
     ) -> NormalizedObservation {
         NormalizedObservation {
-            protocol_version: "2.0".into(),
-            corpus_version: "1.0.0-rc2".into(),
+            protocol_version: "3.0".into(),
+            corpus_version: "1.0.0-rc3".into(),
             vector_id: "TEST-001".into(),
             runner: ComponentIdentity {
                 name: "runner".into(),
@@ -175,6 +176,14 @@ mod tests {
                 source: "system zoneinfo".into(),
                 release: TzdbRelease::Unknown,
                 fingerprint: None,
+            },
+            runner_environment: RunnerEnvironmentProvenance {
+                environment_policy: "hermetic_allowlist_v1".into(),
+                host_timezone_setting: "UTC".into(),
+                locale_policy: "fixed_c".into(),
+                launch_resolution_method: LaunchResolutionMethod::AbsolutePath,
+                platform_variable_names: vec!["TEMP".into(), "TMP".into()],
+                explicit_runner_variable_names: Vec::new(),
             },
             execution_status: status,
             engine_outcome: outcome,

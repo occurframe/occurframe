@@ -5,13 +5,14 @@
 Four versions move independently and are never conflated:
 
 ```text
-Occurframe tooling: 0.1.0-rc2
+Occurframe tooling: 0.1.0-rc3
 Specification:      1.0.0-rc1
-Corpus:             1.0.0-rc2
-Runner protocol:    2.0
+Corpus:             1.0.0-rc3
+Runner protocol:    3.0
 ```
 
-The certification evidence profile is `rc2.1`.
+The successor certification input profile is `rc3.1`; its status is
+`awaiting_recertification`. The immutable historical evidence remains `rc2.1`.
 
 The **behavioural specification** versions separately from everything else
 because it is the semantics an implementation is measured against, not the
@@ -21,7 +22,7 @@ artefact that measures. It is authored in `occurframe/corpus` and declared in
 Specification `1.0.0-rc1` is the version that carries ERRATA-001, under which
 Occurframe v1 ships one semantic command.
 
-`0.1.0-rc2` does not relabel the corpus as stable `1.0.0`, does not claim a
+`0.1.0-rc3` does not relabel the corpus as stable `1.0.0`, does not claim a
 four-command CLI, and does not imply that an Occurframe recurrence engine
 exists.
 
@@ -29,7 +30,7 @@ exists.
 
 ```text
 bin/                      both aliases for four target triples
-corpus/                   generated RC2 distribution plus the protocol schema
+corpus/                   generated RC3 distribution plus protocol v2/v3 schemas
 docs/                     the public documentation set
 examples/minimal-runner/  runnable protocol example (not an engine)
 adapters/                 engine identity registry (no engine runtimes)
@@ -52,7 +53,7 @@ a redistributed copy of it.
 - tooling version, repository, and the exact 40-character commit released;
 - the Rust toolchain that built the binaries (version, host triple, commit hash);
 - every target triple, and every binary with its alias, target and SHA-256;
-- corpus version, repository, pinned corpus SHA, canonical digest, release
+- corpus version, repository, observed source revision and method, independent canonical digest, release
   digest and vector count;
 - the specification version, the errata that fix its command doctrine, and the
   complete set of semantic commands the release ships;
@@ -74,7 +75,8 @@ recording the bundle checksum digest and the archive's SHA-256.
 
 ## Locked evidence
 
-The certified RC2 differential evidence is republished by every release, never
+The certified RC2 differential evidence remains immutable and is not treated as
+certification of RC3. It was republished by the RC2 release, never
 re-measured at release time. It is stored **in this repository** as
 `certification/rc2-evidence.tar.gz` (a deterministic, `gzip -n` archive of the
 certified bundle), not fetched from a hosted CI artifact. Hosted artifacts

@@ -1,4 +1,4 @@
-# PHP protocol-v2 runner
+# PHP protocol-v3 runner
 
 Use PHP 8.4.21. Restore the two repositories in `setup.lock.json` at the exact
 commits into `.adapter-deps`; both are loaded directly without Composer at

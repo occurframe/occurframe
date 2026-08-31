@@ -2,7 +2,7 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use occurframe_conformance::{canonical_json, sha256_hex};
 use occurframe_runner::{CaseExecution, RunnerRegistry};
-use occurframe_wire::{Classification, VerdictStatus};
+use occurframe_wire::{Classification, SourceRevision, VerdictStatus};
 
 use crate::{
     Error, Result,
@@ -42,7 +42,9 @@ pub(crate) fn derive_matrix(
     registry: &RunnerRegistry,
     corpus: &occurframe_conformance::Corpus,
     records: &[CaseExecution],
-    tooling_source_sha: &str,
+    tooling_source: &SourceRevision,
+    corpus_source: &SourceRevision,
+    corpus_canonical_digest: &str,
 ) -> Result<DifferentialMatrix> {
     let mut answer_ids = BTreeMap::<(String, String), String>::new();
     let mut grouped = BTreeMap::<String, BTreeMap<SemanticAnswer, Vec<&CaseExecution>>>::new();
@@ -133,6 +135,7 @@ pub(crate) fn derive_matrix(
                     .collect(),
                 semantic_profile_claims: record.observation.semantic_profile_claims.clone(),
                 tzdb_provenance: record.observation.tzdb_provenance.clone(),
+                runner_environment: record.observation.runner_environment.clone(),
             });
     }
 
@@ -174,11 +177,14 @@ pub(crate) fn derive_matrix(
 
     let summary = matrix_summary(registry, corpus, records, &divergences);
     Ok(DifferentialMatrix {
-        schema_version: "1.0.0".into(),
+        schema_version: "2.0.0".into(),
         certification_id: profile.certification_id.clone(),
         certification_profile_version: profile.certification_profile_version.clone(),
-        tooling_source_sha: tooling_source_sha.into(),
-        corpus_sha: profile.corpus.sha.clone(),
+        tooling_source_revision: tooling_source.revision.clone(),
+        tooling_source_revision_method: Some(tooling_source.method),
+        corpus_source_revision: corpus_source.revision.clone(),
+        corpus_source_revision_method: Some(corpus_source.method),
+        corpus_canonical_digest: Some(corpus_canonical_digest.into()),
         corpus_version: profile.corpus.corpus_version.clone(),
         runner_protocol_version: profile.runner_protocol_version.clone(),
         canonical_platform: profile

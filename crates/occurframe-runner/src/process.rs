@@ -12,14 +12,15 @@ use std::{
 
 use occurframe_conformance::{normalize_completed, normalize_execution_failure};
 use occurframe_wire::{
-    CaseMessage, Diagnostic, ExecutionStatus, HelloMessage, RUNNER_PROTOCOL_VERSION, RunnerMessage,
-    StartedMessage, Vector,
+    CaseMessage, CaseProjection, Diagnostic, ExecutionStatus, HelloMessage,
+    RUNNER_PROTOCOL_VERSION, RunnerEnvironmentProvenance, RunnerMessage, StartedMessage, Vector,
 };
 
 use crate::{
     CaseExecution, ProtocolSchema, RunnerBuild, RunnerDiagnostic,
     batch::execution,
     diagnostics::{BoundedTail, capture_stderr},
+    environment::{planned_environment_provenance, prepare_launch},
 };
 
 /// Default startup/hello/pre-`started` watchdog. It is operational configuration,
@@ -41,33 +42,22 @@ struct RunningProcess {
     stderr_tail: Arc<Mutex<BoundedTail>>,
     stdout_thread: Option<JoinHandle<()>>,
     stderr_thread: Option<JoinHandle<()>>,
+    environment_provenance: RunnerEnvironmentProvenance,
 }
 
 impl RunningProcess {
     fn spawn(build: &RunnerBuild, root: &Path, stderr_capacity: usize) -> std::io::Result<Self> {
-        let program_path = Path::new(&build.launch.program);
-        let program = if program_path.components().count() > 1 && program_path.is_relative() {
-            root.join(program_path)
-        } else {
-            program_path.to_path_buf()
-        };
-        #[cfg(windows)]
-        let program = {
-            let mut platform_program = program;
-            if !platform_program.exists() && platform_program.extension().is_none() {
-                platform_program.set_extension("exe");
-            }
-            platform_program
-        };
+        let launch = prepare_launch(build, root)?;
         let working_directory = root.join(&build.launch.working_directory);
-        let mut command = Command::new(program);
+        let mut command = Command::new(launch.program);
         command
             .args(&build.launch.arguments)
             .current_dir(working_directory)
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
-            .envs(&build.launch.environment);
+            .env_clear()
+            .envs(launch.environment);
         let mut child = command.spawn()?;
         let stdin = child.stdin.take().expect("piped stdin");
         let stdout = child.stdout.take().expect("piped stdout");
@@ -110,6 +100,7 @@ impl RunningProcess {
             stderr_tail,
             stdout_thread: Some(stdout_thread),
             stderr_thread: Some(stderr_thread),
+            environment_provenance: launch.provenance,
         })
     }
 
@@ -178,6 +169,7 @@ pub struct RunnerSupervisor {
     stderr_capacity: usize,
     process: Option<RunningProcess>,
     hello: Option<HelloMessage>,
+    environment_provenance: RunnerEnvironmentProvenance,
 }
 
 impl RunnerSupervisor {
@@ -189,6 +181,7 @@ impl RunnerSupervisor {
         infrastructure_watchdog: Duration,
         stderr_capacity: usize,
     ) -> Self {
+        let environment_provenance = planned_environment_provenance(&build);
         Self {
             build,
             repository_root,
@@ -197,6 +190,7 @@ impl RunnerSupervisor {
             stderr_capacity,
             process: None,
             hello: None,
+            environment_provenance,
         }
     }
 
@@ -206,10 +200,21 @@ impl RunnerSupervisor {
             return self.failure(vector, ExecutionStatus::RunnerFailure, &code, &message);
         }
         let request_id = format!("case-{sequence:06}-{}", vector.id);
+        let projection = match CaseProjection::try_from(vector) {
+            Ok(projection) => projection,
+            Err(error) => {
+                return self.failure(
+                    vector,
+                    ExecutionStatus::RunnerFailure,
+                    "invalid_case_projection",
+                    &error.to_string(),
+                );
+            }
+        };
         let case = RunnerMessage::Case(CaseMessage {
             protocol_version: RUNNER_PROTOCOL_VERSION.into(),
             request_id: request_id.clone(),
-            vector: vector.clone(),
+            case: projection,
             budget_ms: occurframe_wire::OFFICIAL_BUDGET_MS,
         });
         if let Err(error) = self
@@ -264,8 +269,13 @@ impl RunnerSupervisor {
                     && result.request_id == request_id =>
             {
                 let hello = self.hello.as_ref().expect("validated hello");
-                let observation =
-                    normalize_completed(&vector.corpus_version, &vector.id, hello, result);
+                let observation = normalize_completed(
+                    &vector.corpus_version,
+                    &vector.id,
+                    hello,
+                    result,
+                    &self.environment_provenance,
+                );
                 execution(self.build.build_id.clone(), vector, observation, None)
             }
             Ok(_) => self.fail_and_discard(
@@ -296,6 +306,7 @@ impl RunnerSupervisor {
         let process =
             RunningProcess::spawn(&self.build, &self.repository_root, self.stderr_capacity)
                 .map_err(|error| ("startup_failure".into(), error.to_string()))?;
+        self.environment_provenance = process.environment_provenance.clone();
         self.process = Some(process);
         let message = match self.receive_protocol(self.infrastructure_watchdog) {
             Ok(message) => message,
@@ -380,8 +391,13 @@ impl RunnerSupervisor {
             fallback = self.build.fallback_hello();
             &fallback
         };
-        let observation =
-            normalize_execution_failure(&vector.corpus_version, &vector.id, hello, status);
+        let observation = normalize_execution_failure(
+            &vector.corpus_version,
+            &vector.id,
+            hello,
+            status,
+            &self.environment_provenance,
+        );
         execution(
             self.build.build_id.clone(),
             vector,

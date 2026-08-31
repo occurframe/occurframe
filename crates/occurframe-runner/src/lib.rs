@@ -1,4 +1,4 @@
-//! Process supervision for language-neutral Occurframe protocol-v2 runners.
+//! Process supervision for language-neutral Occurframe protocol-v3 runners.
 //!
 //! The crate contains transport and containment logic only. Recurrence parsing,
 //! recurrence evaluation, timezone resolution, and scoring policy remain outside
@@ -14,6 +14,7 @@
 mod batch;
 mod config;
 mod diagnostics;
+mod environment;
 mod process;
 
 pub use batch::{

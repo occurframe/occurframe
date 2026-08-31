@@ -1,4 +1,4 @@
-# RC2 Differential Certification
+# Certification configuration and historical evidence
 
 This directory holds the **authored** certification configuration. It is
 configuration and definition only: it contains no measurements, and nothing in
@@ -17,13 +17,20 @@ An observation never amends an expectation. A report never re-decides a verdict.
 
 ## What the profile pins
 
-`profile.json` is the machine-readable certification configuration. It pins the
-corpus repository and SHA, the corpus version, the runner protocol version, the
-tooling repository and the revision the profile was authored against, the engine
-configuration set (including which builds are declared unreproducible *before*
-execution), every runner version, the official engine timeout, the
-infrastructure watchdog, the canonical platform, and the provenance fields an
-observation and an environment capture must carry.
+`profile.json` is the immutable RC2 configuration. `profile-rc3.json` is the
+successor input prepared for recertification and has status
+`awaiting_recertification`. It declares an expected corpus revision for
+comparison, but the run derives the actual clean checkout revision and records
+it independently from the canonical digest. A mismatch fails closed. If Git
+metadata is unavailable, only an explicit trusted `attested_input` is accepted;
+directory names, versions, and content digests are never invented as source
+identity.
+
+The current profile also pins runner protocol 3.0, the engine configuration set
+(including builds declared unreproducible *before* execution), every runner
+version, the official engine timeout, the infrastructure watchdog, the
+canonical platform, and the provenance fields every observation and environment
+capture must carry.
 
 Two things in the profile deserve emphasis, because they are the parts most
 easily faked:
@@ -41,7 +48,7 @@ runtime versions and the exact tzdb release, and the run captures what was
 *actually* observed. Where a component cannot be pinned perfectly, its observed
 provenance is preserved verbatim rather than rounded to the pinned value.
 
-## The canonical environment
+## The historical RC2 environment
 
 The official RC2 evidence set is measured **only** inside the container defined
 by `docker/Dockerfile`. The host operating system is a host: it starts the
@@ -91,7 +98,7 @@ or release recorded in the lockfiles, and staged outside the working tree. The
 run therefore executes with `--network none`, which makes "this certification
 does not reach the network" a demonstrated property rather than an assurance.
 
-## Running it
+## Prepared RC3 run
 
 ```powershell
 # once, with network: build the canonical image
@@ -106,7 +113,10 @@ pwsh -File .\certification\docker\certify.ps1 -Action run `
   -Script certification/docker/tasks/full-certification.sh
 ```
 
-The driver bind-mounts the tooling repository read-only at `/src`, the corpus
+This command is preparation for the next clean certification task; do not treat
+its mere availability as new evidence or release readiness. The driver first
+requires clean Git worktrees. It bind-mounts the tooling repository read-only at
+`/src`, the corpus
 read-only at `/src-corpus`, and a writable output directory at `/out`. The
 working tree is copied inside the container rather than edited in place, so the
 corpus is provably unmodified and the host's own dependency directories cannot
@@ -120,9 +130,16 @@ historical inventory even though the missing `concurrent-ruby` identity keeps
 those builds out of the new observation population. See
 `RUBY-PROVENANCE.md` for the bounded investigation.
 
+Runner subprocesses do not inherit the container environment. Their executable
+is resolved before `env_clear`; they receive deliberate `TZ=UTC`, the C locale,
+the required platform/temp minimum, and declared build variables only. Each
+observation records the safe policy facts and declared variable names, not
+values.
+
 ## Artifacts
 
-Generated bundles land in `dist/certification/rc2/` and are **not** committed.
+Historical RC2 bundles remain immutable. A successor run lands in
+`dist/certification/rc3/` and is **not** committed.
 They are CI artifacts and future release artifacts. What is version-controlled
 is this profile, the image definition, the report and reconciliation
 implementations, schemas, small golden fixtures, and documentation.

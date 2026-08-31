@@ -1,8 +1,8 @@
 #!/usr/bin/env ruby
-# Protocol-v2 adapter for the two Ruby engines measured in Phase II RC1.
+# Protocol-v3 adapter for the two Ruby engines measured in Phase II RC1.
 require "json"
 
-PROTOCOL = "2.0"
+PROTOCOL = "3.0"
 ROOT = File.expand_path(__dir__)
 DEPS = File.join(ROOT, ".adapter-deps")
 $LOAD_PATH.unshift(*%W[
@@ -95,7 +95,7 @@ abort("unknown or missing --engine") if engine.nil?
 
 emit(
   "message" => "hello", "protocol_version" => PROTOCOL,
-  "runner" => { "name" => "occurframe-ruby-runner", "version" => "2.0.0",
+  "runner" => { "name" => "occurframe-ruby-runner", "version" => "3.0.0",
                 "provenance" => "source:runners/ruby/runner.rb" },
   "engine" => { "name" => engine_name, "version" => engine[:version],
                 "provenance" => engine[:provenance] },
@@ -108,9 +108,15 @@ $stdin.each_line do |line|
   next if line.strip.empty?
   begin
     message = JSON.parse(line)
-    raise "expected protocol-v2 case" unless message["message"] == "case" && message["protocol_version"] == PROTOCOL
+    raise "expected protocol-v3 case" unless message["message"] == "case" && message["protocol_version"] == PROTOCOL
     request_id = message["request_id"]
-    vector = message["vector"]
+    vector = {
+      "id" => message["vector_id"],
+      "family" => message["family"],
+      "operation" => message["operation"],
+      "input" => message["input"],
+      "context" => message["semantic_context"]
+    }
     operation = vector["operation"]
     probe = case operation
             when "cron.parse" then "cron.next"

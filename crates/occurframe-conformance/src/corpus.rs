@@ -88,6 +88,13 @@ pub struct ValidationReport {
 
 /// Load authored files, validate schemas, then enforce cross-file semantic invariants.
 pub fn load_and_validate_corpus(root: &Path) -> Result<(Corpus, ValidationReport)> {
+    load_and_validate_corpus_version(root, "1.0.0-rc3")
+}
+
+pub(crate) fn load_and_validate_corpus_version(
+    root: &Path,
+    expected_version: &str,
+) -> Result<(Corpus, ValidationReport)> {
     validate_schemas(root)?;
     let mut vectors = load_vectors(&root.join("vectors"))?;
     vectors.sort_by(|left, right| left.id.cmp(&right.id));
@@ -105,7 +112,7 @@ pub fn load_and_validate_corpus(root: &Path) -> Result<(Corpus, ValidationReport
         dialects,
         vector_ids,
     };
-    let report = semantic_validate(&corpus)?;
+    let report = semantic_validate(&corpus, expected_version)?;
     Ok((corpus, report))
 }
 
@@ -175,14 +182,14 @@ fn validate_document(schema: &Value, instance: &Value, path: &Path) -> Result<()
     }
 }
 
-fn semantic_validate(corpus: &Corpus) -> Result<ValidationReport> {
+fn semantic_validate(corpus: &Corpus, expected_version: &str) -> Result<ValidationReport> {
     if corpus.vectors.is_empty() {
         return Err(Error::Validation("corpus contains no vectors".into()));
     }
     let corpus_version = corpus.vectors[0].corpus_version.clone();
-    if corpus_version != "1.0.0-rc2" {
+    if corpus_version != expected_version {
         return Err(Error::Validation(format!(
-            "expected corpus 1.0.0-rc2, found {corpus_version}"
+            "expected corpus {expected_version}, found {corpus_version}"
         )));
     }
 

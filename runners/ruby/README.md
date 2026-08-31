@@ -1,4 +1,4 @@
-# Ruby protocol-v2 runner
+# Ruby protocol-v3 runner
 
 Use MRI Ruby 3.3.6. Restore the exact repositories in `setup.lock.json` into
 `.adapter-deps`. Phase II did not record a concurrent-ruby commit, so that one

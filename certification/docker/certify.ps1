@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-  Host-side driver for the canonical Occurframe RC2 certification container.
+  Host-side driver for the canonical Occurframe RC3 certification container.
 
 .DESCRIPTION
   Windows is the *host* only. All certification computation happens inside the
@@ -21,7 +21,7 @@ param(
 
     [string]$Script = 'certification/docker/tasks/next.sh',
 
-    [string]$Tag = 'occurframe-certification:rc2',
+    [string]$Tag = 'occurframe-certification:rc3',
 
     [string]$CorpusPath = '',
 
@@ -46,6 +46,14 @@ $LogFile = Join-Path $LogRoot 'last-run.log'
 $ToolingSha = (& git -C $RepoRoot rev-parse HEAD).Trim()
 if ($LASTEXITCODE -ne 0 -or $ToolingSha -notmatch '^[0-9a-f]{40}$') {
     throw 'Unable to resolve the exact tooling checkout SHA.'
+}
+$ToolingStatus = (& git -C $RepoRoot status --porcelain=v1 --untracked-files=normal)
+if ($LASTEXITCODE -ne 0 -or $ToolingStatus) {
+    throw 'Tooling checkout is dirty; HEAD would not identify the certification build context.'
+}
+$CorpusStatus = (& git -C $CorpusRoot status --porcelain=v1 --untracked-files=normal)
+if ($LASTEXITCODE -ne 0 -or $CorpusStatus) {
+    throw 'Corpus checkout is dirty; HEAD would not identify the certification authority bytes.'
 }
 
 function Write-Log {

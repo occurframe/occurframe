@@ -1,0 +1,215 @@
+{
+  "schema_version": "2.0.0",
+  "certification_profile_version": "rc3.1",
+  "certification_id": "occurframe-rc3-authority-boundary-certification",
+  "status": "awaiting_recertification",
+  "release_posture": {
+    "publishes_stable_release": false,
+    "note": "This profile prepares certification of corrected RC3 semantics, expectation-blind protocol 3.0, observed source provenance, and hermetic runner execution. This task does not generate or publish that evidence."
+  },
+  "corpus": {
+    "repository": "https://github.com/occurframe/corpus",
+    "branch": "dev",
+    "expected_source_revision": "cf45a0bbcb7bbb1d37e03652d49841ee106bcc6b",
+    "canonical_digest": "c0a9cf0587c02ce5022cbb94d060e14d5b9d6f99c3210e512965f35062c4dfe0",
+    "corpus_version": "1.0.0-rc3",
+    "authority": "read_only_normative",
+    "vector_count": 184,
+    "note": "The expected revision is compared to the checkout-derived revision and can never replace it. Canonical content identity is recorded independently."
+  },
+  "tooling": {
+    "repository": "https://github.com/occurframe/occurframe",
+    "branch": "dev",
+    "intended_source_policy": "derive the clean checkout HEAD actually executing the run; a trusted attested input is mandatory when Git metadata is absent",
+    "note": "The tooling revision is observed at execution time. No self-referential expected revision is asserted by this checked-in profile."
+  },
+  "runner_protocol_version": "3.0",
+  "runner_versions": {
+    "occurframe-go-runner": "3.0.0",
+    "occurframe-javascript-runner": "3.0.0",
+    "occurframe-php-runner": "3.0.0",
+    "occurframe-python-runner": "3.0.0",
+    "occurframe-ruby-runner": "3.0.0"
+  },
+  "engine_configuration_set": {
+    "registry": "runners/registry/runner-builds.json",
+    "configured_builds": 25,
+    "reproducible_builds": [
+      "go.robfig-cron",
+      "go.robfig-cron-seconds",
+      "go.rrule-go",
+      "javascript.cron-parser",
+      "javascript.cron-parser-strict",
+      "javascript.croner",
+      "javascript.croner-legacyMode-false",
+      "javascript.cronstrue",
+      "javascript.rrule-js",
+      "php.php-cron-expression",
+      "php.php-rrule",
+      "python.aps.system",
+      "python.aps.vendored",
+      "python.croniter.system",
+      "python.croniter.vendored",
+      "python.croniterAnd.system",
+      "python.croniterAnd.vendored",
+      "python.cronsim.system",
+      "python.cronsim.vendored",
+      "python.dateutil.system",
+      "python.dateutil.vendored",
+      "python.pandas.system",
+      "python.pandas.vendored"
+    ],
+    "unreproducible_builds": [
+      {
+        "build_id": "ruby.fugit",
+        "status": "unreproducible_provenance",
+        "reason": "Phase II provenance did not record the concurrent-ruby commit required by tzinfo; no substitute version is permitted"
+      },
+      {
+        "build_id": "ruby.ice_cube",
+        "status": "unreproducible_provenance",
+        "reason": "Phase II provenance did not record the concurrent-ruby commit required by tzinfo; no substitute version is permitted"
+      }
+    ],
+    "note": "A build may only be absent from the observation set if it is declared unreproducible here before execution."
+  },
+  "execution": {
+    "official_engine_timeout_ms": 8000,
+    "infrastructure_watchdog_ms": 30000,
+    "one_terminal_observation_per_build_vector": true,
+    "vector_prefiltering": "forbidden",
+    "missing_capability_representation": "explicit unsupported observation",
+    "environment_policy": "hermetic_allowlist_v1",
+    "host_timezone_setting": "UTC",
+    "locale_policy": "fixed_c",
+    "launch_resolution_policy": "resolve_before_environment_clear"
+  },
+  "canonical_platform": {
+    "identity": "Ubuntu 24.04 x86_64",
+    "base_image": "ubuntu:24.04@sha256:33ceb71981b602c1a7443a53469e4dba065f7503eab3078a2d7a57a2ab987517",
+    "execution_model": "local Docker container",
+    "image_definition": "certification/docker/Dockerfile",
+    "host_role": "host only; runner subprocesses receive only the hermetic allowlist and declared build variables",
+    "offline_execution_required": true,
+    "pinned_runtimes": {
+      "Go": { "runtime_name": "gc", "pinned_version": "go1.24.7" },
+      "JavaScript": { "runtime_name": "Bun", "pinned_version": "1.3.13" },
+      "PHP": { "runtime_name": "PHP", "pinned_version": "8.4.21" },
+      "Python": { "runtime_name": "CPython", "pinned_version": "3.11.15" },
+      "Ruby": { "runtime_name": "MRI", "pinned_version": "3.3.6" }
+    },
+    "pinned_orchestration_toolchain": { "rustc": "1.95.0" },
+    "pinned_tzdb": {
+      "system_zoneinfo_release": "2026a",
+      "dataform": "rearguard",
+      "acquisition": "built from the IANA release tarball, not from a rolling distribution package"
+    },
+    "guarantee_limits": "The observed container, runtime, tzdb, source, and runner environment policy remain evidence inputs rather than inferred properties."
+  },
+  "required_provenance_fields": {
+    "observation": [
+      "corpus_version",
+      "vector_id",
+      "runner.name",
+      "runner.version",
+      "engine.name",
+      "engine.version",
+      "engine.provenance",
+      "runtime.language",
+      "runtime.runtime",
+      "runtime.version",
+      "dialect_ids",
+      "semantic_profile_claims",
+      "tzdb_provenance",
+      "runner_environment.environment_policy",
+      "runner_environment.host_timezone_setting",
+      "runner_environment.locale_policy",
+      "runner_environment.launch_resolution_method",
+      "runner_environment.explicit_runner_variable_names",
+      "execution_status",
+      "warnings"
+    ],
+    "environment": [
+      "container.image_reference",
+      "container.image_digest",
+      "observed.os",
+      "observed.architecture",
+      "runtimes[].observed_version",
+      "runtimes[].configured_requirement",
+      "tzdb_provenance_sources",
+      "engine_dependencies"
+    ],
+    "manifest": [
+      "tooling_source_revision",
+      "tooling_source_revision_method",
+      "corpus_source_revision",
+      "corpus_source_revision_method",
+      "corpus_canonical_digest",
+      "corpus_version"
+    ],
+    "enforcement": {
+      "source_revision": "actual clean checkout revisions are observed; declared expected revisions are comparisons only and mismatches fail before certification",
+      "runtime_version": "observed runtime version must equal the configured pinned version",
+      "engine_provenance": "runner and engine provenance must be pinned for every configured build",
+      "runner_environment": "effective policy must be hermetic_allowlist_v1 and arbitrary variable values are never copied into evidence",
+      "tzdb_release_kind": "observed release kind must be one of the kinds the build configures"
+    }
+  },
+  "determinism": {
+    "runs_required": 2,
+    "comparison": "byte equality of semantic artifacts and equality of their SHA-256 digests",
+    "semantic_artifacts": [
+      "observations.ndjson",
+      "conformance-results.ndjson",
+      "matrix.json",
+      "matrix.csv",
+      "differential-report.md",
+      "reconciliation.json",
+      "reconciliation.md"
+    ],
+    "excluded_from_comparison": [
+      "certification-manifest.json",
+      "environment.json",
+      "SHA256SUMS"
+    ],
+    "occurrence_ordering": "native order preserved; sorting occurrences to obtain stability is forbidden"
+  },
+  "reconciliation": {
+    "legacy_evidence_root": "legacy/phase2-rc1/",
+    "legacy_status": "historical evidence only",
+    "known_ambiguous_legacy_cells": 814,
+    "phase_two_headline": "157/184",
+    "headline_is_an_acceptance_target": false,
+    "categories": [
+      "exact_match",
+      "protocol_refinement",
+      "tzdb_provenance_change",
+      "runtime_environment_change",
+      "adapter_correction",
+      "fresh_engine_behavior_difference",
+      "legacy_ambiguous_error",
+      "unresolved_difference"
+    ]
+  },
+  "artifact_policy": {
+    "bundle_root": "dist/certification/rc3/",
+    "version_controlled": [
+      "certification profile",
+      "image definition",
+      "report generation implementation",
+      "reconciliation implementation",
+      "schemas and types",
+      "small golden fixtures",
+      "documentation"
+    ],
+    "not_version_controlled": [
+      "observations.ndjson",
+      "conformance-results.ndjson",
+      "matrix.json",
+      "matrix.csv",
+      "generated reports",
+      "SHA256SUMS"
+    ],
+    "distribution": "subsequent clean certification task"
+  }
+}

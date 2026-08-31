@@ -69,7 +69,7 @@ pub fn load_compatible_corpus(root: &Path) -> Result<CompatibleCorpus> {
         let (corpus, _) = load_and_validate_corpus(root)?;
         let canonical_corpus_digest = canonical_corpus_digest(&corpus.vectors)?;
         let corpus_version = corpus.vectors.first().map_or_else(
-            || "1.0.0-rc2".to_owned(),
+            || "1.0.0-rc3".to_owned(),
             |vector| vector.corpus_version.clone(),
         );
         return Ok(CompatibleCorpus {
@@ -183,7 +183,7 @@ fn validate_release_path(path: &str) -> Result<()> {
     Ok(())
 }
 
-/// Generate a deterministic RC2 distribution directory.
+/// Generate a deterministic RC3 distribution directory.
 pub fn pack_release(corpus_root: &Path, output_directory: &Path) -> Result<PackReport> {
     let (corpus, _) = load_and_validate_corpus(corpus_root)?;
     let rendered = render_release(&corpus.vectors)?;
@@ -192,7 +192,7 @@ pub fn pack_release(corpus_root: &Path, output_directory: &Path) -> Result<PackR
         fs::write(output_directory.join(path), bytes)?;
     }
     Ok(PackReport {
-        corpus_version: "1.0.0-rc2".into(),
+        corpus_version: "1.0.0-rc3".into(),
         output_directory: output_directory.to_path_buf(),
         vector_count: corpus.vectors.len(),
         canonical_corpus_digest: rendered.canonical_corpus_digest,
@@ -300,7 +300,7 @@ fn render_release(vectors: &[Vector]) -> Result<RenderedRelease> {
     }
     let manifest = ReleaseManifest {
         schema_version: "1.0.0".into(),
-        corpus_version: "1.0.0-rc2".into(),
+        corpus_version: "1.0.0-rc3".into(),
         canonical_corpus_digest: canonical_corpus_digest.clone(),
         files: manifest_files,
     };
@@ -359,7 +359,7 @@ mod tests {
     fn vector(id: &str, occurrences: Vec<&str>) -> Vector {
         Vector {
             schema_version: "1.0.0".into(),
-            corpus_version: "1.0.0-rc2".into(),
+            corpus_version: "1.0.0-rc3".into(),
             id: id.into(),
             family: "cron.test".into(),
             title: "test".into(),

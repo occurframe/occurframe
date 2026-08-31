@@ -1,4 +1,4 @@
-// Protocol-v2 adapter for the three Go configurations measured in Phase II RC1.
+// Protocol-v3 adapter for the three Go configurations measured in Phase II RC1.
 package main
 
 import (
@@ -16,27 +16,31 @@ import (
 	rrule "github.com/teambition/rrule-go"
 )
 
-const protocol = "2.0"
+const protocol = "3.0"
 
 type vector struct {
-	ID            string `json:"id"`
-	CorpusVersion string `json:"corpus_version"`
-	Operation     string `json:"operation"`
-	Input         struct {
-		Expr    string   `json:"expr"`
-		Start   string   `json:"start"`
-		Count   int      `json:"count"`
-		Zone    *string  `json:"zone"`
-		ICS     string   `json:"ics"`
-		Between []string `json:"between"`
-	} `json:"input"`
+	ID        string      `json:"id"`
+	Operation string      `json:"operation"`
+	Input     vectorInput `json:"input"`
 }
 
 type caseMessage struct {
-	Message         string `json:"message"`
-	ProtocolVersion string `json:"protocol_version"`
-	RequestID       string `json:"request_id"`
-	Vector          vector `json:"vector"`
+	Message         string      `json:"message"`
+	ProtocolVersion string      `json:"protocol_version"`
+	RequestID       string      `json:"request_id"`
+	VectorID        string      `json:"vector_id"`
+	Family          string      `json:"family"`
+	Operation       string      `json:"operation"`
+	Input           vectorInput `json:"input"`
+}
+
+type vectorInput struct {
+	Expr    string   `json:"expr"`
+	Start   string   `json:"start"`
+	Count   int      `json:"count"`
+	Zone    *string  `json:"zone"`
+	ICS     string   `json:"ics"`
+	Between []string `json:"between"`
 }
 
 type diagnostic struct {
@@ -240,7 +244,7 @@ func main() {
 	writer := bufio.NewWriter(os.Stdout)
 	hello := map[string]any{
 		"message": "hello", "protocol_version": protocol,
-		"runner":       map[string]any{"name": "occurframe-go-runner", "version": "2.0.0", "provenance": "source:runners/go/main.go"},
+		"runner":       map[string]any{"name": "occurframe-go-runner", "version": "3.0.0", "provenance": "source:runners/go/main.go"},
 		"engine":       map[string]any{"name": selected.name, "version": selected.version, "provenance": selected.provenance},
 		"runtime":      map[string]any{"language": "Go", "runtime": "gc", "version": runtime.Version()},
 		"capabilities": selected.operations, "dialect_ids": selected.dialects,
@@ -259,13 +263,14 @@ func main() {
 		}
 		var message caseMessage
 		if err := json.Unmarshal(scanner.Bytes(), &message); err != nil || message.Message != "case" || message.ProtocolVersion != protocol {
-			fmt.Fprintln(os.Stderr, "invalid protocol-v2 case")
+			fmt.Fprintln(os.Stderr, "invalid protocol-v3 case")
 			os.Exit(1)
 		}
 		if err := emit(writer, map[string]any{"message": "started", "protocol_version": protocol, "request_id": message.RequestID}); err != nil {
 			os.Exit(1)
 		}
-		operation := message.Vector.Operation
+		question := vector{ID: message.VectorID, Operation: message.Operation, Input: message.Input}
+		operation := question.Operation
 		probe := operation
 		if operation == "cron.parse" {
 			probe = "cron.next"
@@ -276,7 +281,7 @@ func main() {
 		if !contains(selected.operations, operation) && !contains(selected.operations, probe) {
 			terminal = outcome{Type: "unsupported", Diagnostic: &diagnostic{"unsupported_operation", selected.name + " does not implement " + operation}}
 		} else {
-			occurrences, runError := selected.run(message.Vector)
+			occurrences, runError := selected.run(question)
 			if runError == nil {
 				if strings.HasSuffix(operation, ".parse") {
 					terminal = outcome{Type: "accepted"}

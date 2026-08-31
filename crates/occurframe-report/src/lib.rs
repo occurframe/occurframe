@@ -24,11 +24,15 @@ use std::{
     path::Path,
 };
 
-use occurframe_conformance::{canonical_json_line, canonical_pretty_json, sha256_hex};
+use occurframe_conformance::{
+    canonical_corpus_digest, canonical_json_line, canonical_pretty_json, sha256_hex,
+};
 use occurframe_runner::{
     CaseExecution, ReproducibilityStatus, RunnerRegistry, semantic_observation_ndjson,
 };
-use occurframe_wire::{ExecutionStatus, OFFICIAL_BUDGET_MS, RUNNER_PROTOCOL_VERSION};
+use occurframe_wire::{
+    ExecutionStatus, OFFICIAL_BUDGET_MS, RUNNER_PROTOCOL_VERSION, SourceRevision,
+};
 use serde_json::Value;
 
 const OBSERVATIONS: &str = "observations.ndjson";
@@ -80,7 +84,9 @@ pub struct BundleInput<'a> {
     pub corpus: &'a occurframe_conformance::Corpus,
     pub executions: &'a [CaseExecution],
     pub environment: &'a Value,
-    pub tooling_source_sha: &'a str,
+    pub tooling_source: &'a SourceRevision,
+    pub corpus_source: &'a SourceRevision,
+    pub corpus_canonical_digest: &'a str,
     pub legacy_matrix: &'a Value,
     pub legacy_build_map: &'a LegacyBuildMap,
     pub observation_schema: &'a Value,
@@ -124,7 +130,9 @@ pub fn generate_bundle(input: &BundleInput<'_>, output: &Path) -> Result<Certifi
         input.registry,
         input.corpus,
         input.executions,
-        input.tooling_source_sha,
+        input.tooling_source,
+        input.corpus_source,
+        input.corpus_canonical_digest,
     )?;
     let reconciliation = reconciliation::reconcile(
         input.profile,
@@ -170,13 +178,16 @@ pub fn generate_bundle(input: &BundleInput<'_>, output: &Path) -> Result<Certifi
             .ok_or_else(|| Error::Validation("missing environment artifact".into()))?,
     );
     let manifest = CertificationManifest {
-        schema_version: "1.0.0".into(),
+        schema_version: "2.0.0".into(),
         artifact_kind: "candidate_evidence_base_not_normative_authority".into(),
         certification_id: input.profile.certification_id.clone(),
         certification_profile_version: input.profile.certification_profile_version.clone(),
-        tooling_source_sha: input.tooling_source_sha.into(),
+        tooling_source_revision: input.tooling_source.revision.clone(),
+        tooling_source_revision_method: Some(input.tooling_source.method),
         corpus_repository: input.profile.corpus.repository.clone(),
-        corpus_sha: input.profile.corpus.sha.clone(),
+        corpus_source_revision: input.corpus_source.revision.clone(),
+        corpus_source_revision_method: Some(input.corpus_source.method),
+        corpus_canonical_digest: Some(input.corpus_canonical_digest.into()),
         corpus_version: input.profile.corpus.corpus_version.clone(),
         runner_protocol_version: input.profile.runner_protocol_version.clone(),
         configured_builds: input.registry.builds.len(),
@@ -295,30 +306,56 @@ pub fn verify_bundle_checksums(directory: &Path) -> Result<()> {
 
 fn validate_profile(input: &BundleInput<'_>) -> Result<()> {
     let profile = input.profile;
-    if profile.schema_version != "1.0.0"
+    let observed_canonical_digest = canonical_corpus_digest(&input.corpus.vectors)?;
+    if profile.schema_version != "2.0.0"
         || profile.runner_protocol_version != RUNNER_PROTOCOL_VERSION
-        || profile.corpus.corpus_version != "1.0.0-rc2"
+        || profile.corpus.corpus_version != "1.0.0-rc3"
         || profile.corpus.vector_count != input.corpus.vectors.len()
+        || profile.corpus.canonical_digest.as_deref() != Some(input.corpus_canonical_digest)
+        || observed_canonical_digest != input.corpus_canonical_digest
         || profile.execution.official_engine_timeout_ms != OFFICIAL_BUDGET_MS
         || profile.execution.infrastructure_watchdog_ms != 30_000
         || !profile.execution.one_terminal_observation_per_build_vector
         || profile.execution.vector_prefiltering != "forbidden"
         || profile.execution.missing_capability_representation != "explicit unsupported observation"
+        || profile.execution.environment_policy.as_deref() != Some("hermetic_allowlist_v1")
+        || profile.execution.host_timezone_setting.as_deref() != Some("UTC")
+        || profile.execution.locale_policy.as_deref() != Some("fixed_c")
+        || profile.execution.launch_resolution_policy.as_deref()
+            != Some("resolve_before_environment_clear")
         || profile.determinism.runs_required != 2
     {
         return Err(Error::Validation(
-            "certification profile violates a frozen RC2 execution invariant".into(),
+            "certification profile violates a frozen RC3 execution invariant".into(),
         ));
     }
-    if input.tooling_source_sha.len() != 40
-        || !input
-            .tooling_source_sha
-            .bytes()
-            .all(|byte| byte.is_ascii_hexdigit())
+    for (kind, source) in [
+        ("tooling", input.tooling_source),
+        ("corpus", input.corpus_source),
+    ] {
+        if source.revision.len() != 40
+            || !source.revision.bytes().all(|byte| byte.is_ascii_hexdigit())
+        {
+            return Err(Error::Validation(format!(
+                "{kind} source revision must be a full 40-character Git object ID"
+            )));
+        }
+    }
+    if profile.corpus.expected_source_revision.as_deref()
+        != Some(input.corpus_source.revision.as_str())
     {
-        return Err(Error::Validation(
-            "tooling source SHA must be a full 40-character Git object ID".into(),
-        ));
+        return Err(Error::Validation(format!(
+            "expected corpus source revision {:?}, observed {}",
+            profile.corpus.expected_source_revision, input.corpus_source.revision
+        )));
+    }
+    if let Some(expected) = profile.tooling.expected_source_revision.as_deref() {
+        if expected != input.tooling_source.revision {
+            return Err(Error::Validation(format!(
+                "expected tooling source revision {expected}, observed {}",
+                input.tooling_source.revision
+            )));
+        }
     }
     if input.registry.builds.len() != profile.engine_configuration_set.configured_builds {
         return Err(Error::Validation(
@@ -436,11 +473,38 @@ fn validate_completeness(input: &BundleInput<'_>) -> Result<()> {
             )));
         }
         let build = build_by_id[execution.build_id.as_str()];
+        let explicit_environment_names: Vec<_> = build.launch.environment.keys().cloned().collect();
+        let expected_timezone = build
+            .launch
+            .environment
+            .get("TZ")
+            .map_or("UTC", String::as_str);
+        let expected_locale_policy = if ["LANG", "LC_ALL", "LC_TIME"]
+            .iter()
+            .any(|name| build.launch.environment.contains_key(*name))
+        {
+            "explicit_runner_configuration"
+        } else {
+            "fixed_c"
+        };
         if execution.observation.runner.provenance.is_none()
             || execution.observation.engine.provenance.is_none()
             || execution.observation.runtime.version != build.runtime_requirement
             || execution.observation.corpus_version != input.profile.corpus.corpus_version
             || execution.observation.protocol_version != input.profile.runner_protocol_version
+            || execution.observation.runner_environment.environment_policy
+                != "hermetic_allowlist_v1"
+            || execution
+                .observation
+                .runner_environment
+                .host_timezone_setting
+                != expected_timezone
+            || execution.observation.runner_environment.locale_policy != expected_locale_policy
+            || execution
+                .observation
+                .runner_environment
+                .explicit_runner_variable_names
+                != explicit_environment_names
         {
             return Err(Error::Validation(format!(
                 "missing or mismatched provenance at {} / {}",
@@ -683,5 +747,34 @@ mod tests {
             bytes: 1,
         }];
         assert_ne!(combined_digest(&one), combined_digest(&two));
+    }
+
+    #[test]
+    fn successor_and_historical_profiles_have_distinct_source_identity_models() {
+        let root = Path::new(env!("CARGO_MANIFEST_DIR"))
+            .parent()
+            .and_then(Path::parent)
+            .expect("workspace root");
+        let successor = load_profile(&root.join("certification/profile-rc3.json")).unwrap();
+        assert_eq!(successor.schema_version, "2.0.0");
+        assert_eq!(successor.status, "awaiting_recertification");
+        assert_eq!(successor.runner_protocol_version, "3.0");
+        assert_eq!(
+            successor.corpus.canonical_digest.as_deref(),
+            Some("c0a9cf0587c02ce5022cbb94d060e14d5b9d6f99c3210e512965f35062c4dfe0")
+        );
+        assert!(successor.corpus.expected_source_revision.is_some());
+        assert!(successor.tooling.expected_source_revision.is_none());
+
+        let historical = load_profile(&root.join("certification/profile.json")).unwrap();
+        assert_eq!(historical.runner_protocol_version, "2.0");
+        assert_eq!(
+            historical.corpus.expected_source_revision.as_deref(),
+            Some("f5026940fcc667b1892e99f3abe95b424931bed0")
+        );
+        assert_eq!(
+            historical.tooling.expected_source_revision.as_deref(),
+            Some("a59b1b328e466077b3c5c32fec1e6a3121621d21")
+        );
     }
 }

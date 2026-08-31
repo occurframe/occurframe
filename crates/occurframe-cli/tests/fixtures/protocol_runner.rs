@@ -5,13 +5,13 @@ fn main() {
     if mode == "runner-failure" {
         process::exit(17);
     }
-    println!("{{\"message\":\"hello\",\"protocol_version\":\"2.0\",\"runner\":{{\"name\":\"cli-fixture-runner\",\"version\":\"2.0.0\",\"provenance\":\"source:occurframe-cli/tests/fixtures/protocol_runner.rs\"}},\"engine\":{{\"name\":\"cli-fixture-engine\",\"version\":\"1.0.0\",\"provenance\":\"deterministic test fixture\"}},\"runtime\":{{\"language\":\"Rust\",\"runtime\":\"rustc-fixture\",\"version\":\"deterministic\"}},\"capabilities\":[\"cron.next\"],\"dialect_ids\":[\"cron.vixie@1\"],\"semantic_profile_claims\":{{\"cron.start_inclusivity\":\"exclusive\",\"cron.start_truncation\":\"exact\"}},\"tzdb_provenance\":{{\"source\":\"fixture tzdb\",\"release_kind\":\"exact\",\"release\":\"2026a\"}}}}");
+    println!("{{\"message\":\"hello\",\"protocol_version\":\"3.0\",\"runner\":{{\"name\":\"cli-fixture-runner\",\"version\":\"3.0.0\",\"provenance\":\"source:occurframe-cli/tests/fixtures/protocol_runner.rs\"}},\"engine\":{{\"name\":\"cli-fixture-engine\",\"version\":\"1.0.0\",\"provenance\":\"deterministic test fixture\"}},\"runtime\":{{\"language\":\"Rust\",\"runtime\":\"rustc-fixture\",\"version\":\"deterministic\"}},\"capabilities\":[\"cron.next\"],\"dialect_ids\":[\"cron.vixie@1\"],\"semantic_profile_claims\":{{\"cron.start_inclusivity\":\"exclusive\",\"cron.start_truncation\":\"exact\"}},\"tzdb_provenance\":{{\"source\":\"fixture tzdb\",\"release_kind\":\"exact\",\"release\":\"2026a\"}}}}");
     io::stdout().flush().expect("flush hello");
     for line in io::stdin().lock().lines() {
         let line = line.expect("case line");
         let request_id = extract(&line, "\"request_id\":\"").unwrap_or("missing");
-        let vector_id = extract(&line, "\"id\":\"").unwrap_or("missing");
-        println!("{{\"message\":\"started\",\"protocol_version\":\"2.0\",\"request_id\":\"{request_id}\"}}");
+        let vector_id = extract(&line, "\"vector_id\":\"").unwrap_or("missing");
+        println!("{{\"message\":\"started\",\"protocol_version\":\"3.0\",\"request_id\":\"{request_id}\"}}");
         io::stdout().flush().expect("flush started");
         if mode == "timeout" {
             thread::sleep(Duration::from_secs(60));
@@ -29,7 +29,7 @@ fn main() {
         } else {
             "[]"
         };
-        println!("{{\"message\":\"result\",\"protocol_version\":\"2.0\",\"request_id\":\"{request_id}\",\"outcome\":{outcome},\"warnings\":{warnings}}}");
+        println!("{{\"message\":\"result\",\"protocol_version\":\"3.0\",\"request_id\":\"{request_id}\",\"outcome\":{outcome},\"warnings\":{warnings}}}");
         io::stdout().flush().expect("flush result");
     }
 }

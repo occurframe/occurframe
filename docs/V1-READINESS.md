@@ -1,9 +1,14 @@
-# Stable-v1 readiness audit
+# Current readiness and historical RC2 audit
 
-**Question this document answers:** *is the implementation technically ready for
-an owner-reviewed public prerelease after CI?*
+**Current answer: AWAITING RECERTIFICATION.** The corrected RC3 corpus,
+expectation-blind protocol 3.0, checkout-derived source provenance, and hermetic
+runner environment are not certified by the immutable RC2 evidence described
+below. No owner merge/release readiness claim applies until the subsequent clean
+certification and release-gate task succeeds.
 
-**Answer: READY FOR OWNER MERGE REVIEW.** Every gate this project defines has
+The remainder of this document is the historical RC2 readiness record. At that
+time the answer was **READY FOR OWNER MERGE REVIEW** because every then-defined gate
+had
 now concluded green in hosted CI against one commit: `cargo fmt`, clippy at
 `-D warnings`, the test suite and documentation on Ubuntu, Windows and macOS;
 native binaries on all four release targets with alias smoke, path-leak audit

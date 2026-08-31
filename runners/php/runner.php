@@ -1,8 +1,8 @@
 <?php
-/** Protocol-v2 adapter for the two PHP engines measured in Phase II RC1. */
+/** Protocol-v3 adapter for the two PHP engines measured in Phase II RC1. */
 declare(strict_types=1);
 
-const PROTOCOL_VERSION = '2.0';
+const PROTOCOL_VERSION = '3.0';
 $engineName = option('engine');
 if ($engineName === null) {
     fwrite(STDERR, "--engine is required\n");
@@ -135,7 +135,7 @@ if (!array_key_exists($engineName, $engines)) {
 $engine = $engines[$engineName];
 emit([
     'message' => 'hello', 'protocol_version' => PROTOCOL_VERSION,
-    'runner' => ['name' => 'occurframe-php-runner', 'version' => '2.0.0',
+    'runner' => ['name' => 'occurframe-php-runner', 'version' => '3.0.0',
                  'provenance' => 'source:runners/php/runner.php'],
     'engine' => ['name' => $engineName, 'version' => $engine['version'],
                  'provenance' => $engine['provenance']],
@@ -149,10 +149,16 @@ while (($line = fgets(STDIN)) !== false) {
     try {
         $case = json_decode($line, true, 512, JSON_THROW_ON_ERROR);
         if (($case['message'] ?? null) !== 'case' || ($case['protocol_version'] ?? null) !== PROTOCOL_VERSION) {
-            throw new RuntimeException('expected protocol-v2 case');
+            throw new RuntimeException('expected protocol-v3 case');
         }
         $requestId = $case['request_id'];
-        $vector = $case['vector'];
+        $vector = [
+            'id' => $case['vector_id'],
+            'family' => $case['family'],
+            'operation' => $case['operation'],
+            'input' => $case['input'],
+            'context' => $case['semantic_context'],
+        ];
         $operation = $vector['operation'];
         $probe = $operation === 'cron.parse' ? 'cron.next'
                : ($operation === 'rrule.parse' ? 'rrule.expand' : $operation);

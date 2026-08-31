@@ -1,9 +1,13 @@
-# Occurframe 0.1.0-rc2
+# Historical Occurframe 0.1.0-rc2 release template
 
 **Occurframe is an executable conformance oracle for recurring-time semantics.
 It is not a scheduling engine.**
 
 This is a **prerelease**. It is not Occurframe v1.0.
+
+This template and the evidence it describes remain immutable historical RC2
+release inputs. Current tooling/corpus protocol 3.0 is **AWAITING
+RECERTIFICATION** and must not be assembled from this evidence lock.
 
 ```text
 Occurframe tooling: 0.1.0-rc2

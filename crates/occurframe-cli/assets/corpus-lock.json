@@ -1,8 +1,8 @@
 {
-  "canonical_digest": "4804772d20fb36c7329b2c5f2f28e264d9bc00b11e407e76d9836fc38cd80470",
+  "canonical_digest": "c0a9cf0587c02ce5022cbb94d060e14d5b9d6f99c3210e512965f35062c4dfe0",
   "corpus_repository": "https://github.com/occurframe/corpus",
-  "corpus_sha": "f5026940fcc667b1892e99f3abe95b424931bed0",
-  "corpus_version": "1.0.0-rc2",
-  "release_digest": "8254f0dcb5e2dc0c719acbb2ec02185972f318d0bfc619ac73065b257b426477",
+  "expected_source_revision": "cf45a0bbcb7bbb1d37e03652d49841ee106bcc6b",
+  "corpus_version": "1.0.0-rc3",
+  "release_digest": "3fb4e9fca0bbbed078568cbc92cae78e2d240149cf4c9e13cab3a447f180e448",
   "vector_count": 184
 }

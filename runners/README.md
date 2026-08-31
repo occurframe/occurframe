@@ -13,5 +13,5 @@ select a newer dependency.
 
 Installed dependencies and compiled binaries are ignored. A prepared adapter
 must run without network access. The representative fixture file contains only
-IDs from corpus `1.0.0-rc2`; it is test configuration and carries no semantic
+IDs from corpus `1.0.0-rc3`; it is test configuration and carries no semantic
 authority.

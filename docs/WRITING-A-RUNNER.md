@@ -35,7 +35,7 @@ Rules that are enforced, not merely expected:
   `result`, both echoing the same `request_id`.
 - One process serves many cases. Keep reading stdin until EOF.
 - Every inbound and outbound message is validated against
-  `corpus/schemas/runner-protocol-v2.schema.json`, shipped in the release. A
+  `corpus/schemas/runner-protocol-v3.schema.json`, shipped in the release. A
   message that does not validate is an infrastructure failure.
 - A protocol line above 8 MiB is refused.
 
@@ -46,8 +46,8 @@ Sent once, immediately, before reading stdin.
 ```json
 {
   "message": "hello",
-  "protocol_version": "2.0",
-  "runner":  {"name": "my-runner", "version": "1.0.0", "provenance": "source:runners/mine.py"},
+  "protocol_version": "3.0",
+  "runner":  {"name": "my-runner", "version": "3.0.0", "provenance": "source:runners/mine.py"},
   "engine":  {"name": "my-engine", "version": "3.2.1", "provenance": "git myorg/my-engine@<sha>"},
   "runtime": {"language": "Python", "runtime": "CPython", "version": "3.11.9"},
   "capabilities": ["cron.next", "cron.parse"],
@@ -116,25 +116,32 @@ Occurframe sends one per vector.
 ```json
 {
   "message": "case",
-  "protocol_version": "2.0",
+  "protocol_version": "3.0",
   "request_id": "case-000001-CRON-ANCH-001",
-  "vector": { "...": "the full authored vector" },
+  "vector_id": "CRON-ANCH-001",
+  "family": "cron.anchoring",
+  "operation": "cron.next",
+  "input": {"kind":"cron","expr":"0 12 * * *","fields":5,"start":"2026-01-01T12:00:00","count":1,"inclusive":false,"zone":null},
+  "semantic_context": {"dialect":"cron.vixie@1","policy":{},"requires":[],"tzdb_min":null,"tzdb_pin":null},
   "budget_ms": 8000
 }
 ```
 
-The `vector` object is the authored corpus vector verbatim. The fields you act on:
+This is an expectation-blind projection, not the authored vector. The authority
+retains the canonical vector and joins your observation to it after the runner
+answers. The fields you act on:
 
 - `operation` — what to do, for example `cron.next` or `cron.parse`. If it is not
   in your declared `capabilities`, answer `unsupported`.
 - `input` — for cron: `expr`, `fields`, `start`, `count`, `inclusive`, `zone`.
-- `context` — `dialect`, `policy`, `requires`, `tzdb_pin`, `tzdb_min`. If
-  `context` demands something you cannot honour, answer `unsupported` rather than
+- `semantic_context` — `dialect`, `policy`, `requires`, `tzdb_pin`, `tzdb_min`. If
+  the context demands something you cannot honour, answer `unsupported` rather than
   approximating.
-- `id`, `family`, `classification`, `expectation` — metadata. **Do not read
-  `expectation`.** It is present because the vector is passed whole; a runner
-  that consults it is reporting the corpus back to itself, not measuring an
-  engine.
+- `vector_id` and `family` — opaque diagnostic correlation only.
+
+The case type has no field capable of carrying expectations, admissible answer
+sets, classification, normative evidence, rationale, tags, or scoring policy.
+Protocol 2.0 exposed the full vector and is intentionally not wire-compatible.
 
 Occurrence values are civil-time strings and must be returned in the engine's
 own order, unsorted and undeduplicated. Order and duplicates are part of the
@@ -145,7 +152,7 @@ observed behaviour.
 Emit this as soon as you have read the case and before you call the engine.
 
 ```json
-{"message": "started", "protocol_version": "2.0", "request_id": "case-000001-CRON-ANCH-001"}
+{"message": "started", "protocol_version": "3.0", "request_id": "case-000001-CRON-ANCH-001"}
 ```
 
 It is the attributable acknowledgement: until it arrives, a slow or hung process
@@ -162,7 +169,7 @@ there are none.
 ```json
 {
   "message": "result",
-  "protocol_version": "2.0",
+  "protocol_version": "3.0",
   "request_id": "case-000001-CRON-ANCH-001",
   "outcome": {"type": "occurrences", "occurrences": ["2026-01-02T12:00:00"]},
   "warnings": []
@@ -209,8 +216,8 @@ Occurframe learns about your build from a registry file. Point at it with
   "builds": [
     {
       "build_id": "myorg.my-engine.pinned",
-      "protocol_version": "2.0",
-      "runner":  {"name": "my-runner", "version": "1.0.0", "provenance": "source:runners/mine.py"},
+      "protocol_version": "3.0",
+      "runner":  {"name": "my-runner", "version": "3.0.0", "provenance": "source:runners/mine.py"},
       "engine":  {"name": "my-engine", "version": "3.2.1", "provenance": "git myorg/my-engine@<sha>"},
       "language": "Python",
       "runtime_name": "CPython",
@@ -242,12 +249,17 @@ Notes that save time:
   immutable engine *and configuration*. A different configuration that changes
   semantic claims is a different build ID, not a flag.
 - `launch.program` with more than one path component and no leading root is
-  resolved against the runner root; a bare name such as `python3` is looked up on
-  `PATH`. `.exe` is appended automatically on Windows when needed.
+  resolved against the runner root; a bare name such as `python3` is resolved
+  from the authority process's `PATH` before launch. The runner itself receives
+  no inherited `PATH`.
 - The runner root defaults to the registry file's own directory, so a registry can
   live anywhere. Override with `OCCURFRAME_RUNNER_ROOT`.
 - `working_directory` is resolved against the runner root and becomes the
   process's working directory.
+- The child environment is cleared. Occurframe grants fixed `TZ=UTC`, `LANG=C`,
+  `LC_ALL=C`, the documented platform minimum, and then exactly the variables
+  under `launch.environment`. Declare every host dependency explicitly; secret
+  and CI variables are not inherited.
 - `fallback_tzdb_provenance` is used only to give a deterministic identity to a
   process that died before it could send a trustworthy `hello`.
 - `representative_vectors` is the smoke subset for the build and must be

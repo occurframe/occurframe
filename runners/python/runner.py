@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Protocol-v2 adapter for the six Python engines measured in Phase II RC1."""
+"""Protocol-v3 adapter for the six Python engines measured in Phase II RC1."""
 
 from __future__ import annotations
 
@@ -11,8 +11,8 @@ import os
 import sys
 
 UTC = dt.timezone.utc
-PROTOCOL = "2.0"
-RUNNER = {"name": "occurframe-python-runner", "version": "2.0.0",
+PROTOCOL = "3.0"
+RUNNER = {"name": "occurframe-python-runner", "version": "3.0.0",
           "provenance": "source:runners/python/runner.py"}
 
 
@@ -280,9 +280,15 @@ def main():
         try:
             case = json.loads(line)
             if case.get("message") != "case" or case.get("protocol_version") != PROTOCOL:
-                raise ValueError("expected protocol-v2 case")
+                raise ValueError("expected protocol-v3 case")
             request_id = case["request_id"]
-            vector = case["vector"]
+            vector = {
+                "id": case["vector_id"],
+                "family": case["family"],
+                "operation": case["operation"],
+                "input": case["input"],
+                "context": case["semantic_context"],
+            }
             operation = vector["operation"]
             probe = {"cron.parse": "cron.next", "rrule.parse": "rrule.expand"}.get(operation, operation)
             if operation not in engine.ops and probe not in engine.ops:

@@ -1,6 +1,6 @@
 {
   "schema_version": "1.0.0",
-  "source": "occurframe/corpus 1.0.0-rc2",
+  "source": "occurframe/corpus 1.0.0-rc3",
   "vector_ids": [
     "CRON-ANCH-001",
     "CRON-DAYF-001",

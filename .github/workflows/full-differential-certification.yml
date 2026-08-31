@@ -2,26 +2,12 @@ name: Full Differential Certification
 
 on:
   workflow_dispatch:
-  schedule:
-    - cron: "41 3 1 * *"
-  # This narrowly scoped dev trigger permits validation before the workflow can
-  # exist on the untouched default branch. It is not an ordinary PR trigger.
-  push:
-    branches: [dev]
-    paths:
-      - .github/workflows/full-differential-certification.yml
-      - certification/**
-      - crates/occurframe-report/**
-      - crates/occurframe-runner/**
-      - crates/occurframe-conformance/**
-      - crates/occurframe-wire/**
-      - runners/**
-      - xtask/**
-      - Cargo.toml
-      - Cargo.lock
+
+# Preparation only: this workflow is intentionally manual until the owner starts
+# the subsequent clean recertification task.
 
 concurrency:
-  group: rc2-full-differential-${{ github.ref }}
+  group: rc3-full-differential-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
@@ -34,11 +20,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Check out immutable RC2 authority
+      - name: Check out corrected RC3 authority
         uses: actions/checkout@v4
         with:
           repository: occurframe/corpus
-          ref: f5026940fcc667b1892e99f3abe95b424931bed0
+          ref: cf45a0bbcb7bbb1d37e03652d49841ee106bcc6b
           path: corpus
 
       - uses: dtolnay/rust-toolchain@stable
@@ -64,14 +50,15 @@ jobs:
       - name: Publish concise certification summary
         shell: bash
         run: |
-          matrix=dist/certification/rc2/matrix.json
-          reconciliation=dist/certification/rc2/reconciliation.json
+          matrix=dist/certification/rc3/matrix.json
+          reconciliation=dist/certification/rc3/reconciliation.json
           determinism=dist/certification/determinism.json
           {
-            echo "## RC2 full differential certification"
+            echo "## RC3 authority-boundary differential certification"
             echo
             echo "- Tooling SHA: \`${GITHUB_SHA}\`"
-            echo "- Corpus SHA: \`f5026940fcc667b1892e99f3abe95b424931bed0\`"
+            echo "- Corpus source revision: \`$(jq -r '.corpus_source_revision' "$matrix")\`"
+            echo "- Corpus canonical digest: \`$(jq -r '.corpus_canonical_digest' "$matrix")\`"
             echo "- Observations: $(jq -r '.summary.actual_observations' "$matrix")"
             echo "- Semantic divergence vectors: $(jq -r '.summary.semantic_divergence_vectors' "$matrix")"
             echo "- Normative violation vectors: $(jq -r '.summary.normative_violation_vectors' "$matrix")"
@@ -87,9 +74,9 @@ jobs:
       - name: Upload canonical certification evidence bundle
         uses: actions/upload-artifact@v4
         with:
-          name: occurframe-rc2-certification-${{ github.sha }}
+          name: occurframe-rc3-certification-${{ github.sha }}
           path: |
-            dist/certification/rc2/
+            dist/certification/rc3/
             dist/certification/determinism.json
           if-no-files-found: error
           retention-days: 90

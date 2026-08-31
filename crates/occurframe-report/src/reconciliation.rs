@@ -301,7 +301,7 @@ fn classify_comparison(
         return (
             ReconciliationCategory::ProtocolRefinement,
             format!(
-                "RC1 {legacy_status} is represented by protocol-v2 unsupported without treating it as semantic disagreement"
+                "RC1 {legacy_status} is represented by protocol-v3 unsupported without treating it as semantic disagreement"
             ),
             false,
         );
@@ -314,7 +314,7 @@ fn classify_comparison(
     {
         return (
             ReconciliationCategory::ProtocolRefinement,
-            "RC1 empty status is represented by a successful protocol-v2 occurrences outcome containing []".into(),
+            "RC1 empty status is represented by a successful protocol-v3 occurrences outcome containing []".into(),
             false,
         );
     }

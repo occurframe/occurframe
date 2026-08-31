@@ -1,16 +1,18 @@
 use occurframe_wire::{
     ExecutionStatus, HelloMessage, NormalizedObservation, RUNNER_PROTOCOL_VERSION, ResultMessage,
+    RunnerEnvironmentProvenance,
 };
 
 use crate::{Result, canonical_json, sha256_hex};
 
-/// Normalize a completed protocol-v2 result without changing occurrence order.
+/// Normalize a completed protocol-v3 result without changing occurrence order.
 #[must_use]
 pub fn normalize_completed(
     corpus_version: &str,
     vector_id: &str,
     hello: &HelloMessage,
     result: ResultMessage,
+    runner_environment: &RunnerEnvironmentProvenance,
 ) -> NormalizedObservation {
     NormalizedObservation {
         protocol_version: RUNNER_PROTOCOL_VERSION.into(),
@@ -22,6 +24,7 @@ pub fn normalize_completed(
         dialect_ids: hello.dialect_ids.clone(),
         semantic_profile_claims: hello.semantic_profile_claims.clone(),
         tzdb_provenance: hello.tzdb_provenance.clone(),
+        runner_environment: runner_environment.clone(),
         execution_status: ExecutionStatus::Completed,
         engine_outcome: Some(result.outcome),
         warnings: result.warnings,
@@ -35,6 +38,7 @@ pub fn normalize_execution_failure(
     vector_id: &str,
     hello: &HelloMessage,
     status: ExecutionStatus,
+    runner_environment: &RunnerEnvironmentProvenance,
 ) -> NormalizedObservation {
     assert_ne!(status, ExecutionStatus::Completed);
     NormalizedObservation {
@@ -47,6 +51,7 @@ pub fn normalize_execution_failure(
         dialect_ids: hello.dialect_ids.clone(),
         semantic_profile_claims: hello.semantic_profile_claims.clone(),
         tzdb_provenance: hello.tzdb_provenance.clone(),
+        runner_environment: runner_environment.clone(),
         execution_status: status,
         engine_outcome: None,
         warnings: Vec::new(),

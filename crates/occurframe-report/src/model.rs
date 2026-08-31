@@ -2,7 +2,8 @@ use std::collections::BTreeMap;
 
 use occurframe_wire::{
     Classification, ComponentIdentity, ConformanceVerdict, Diagnostic, EngineOutcome,
-    ExecutionStatus, RuntimeIdentity, SemanticValue, TzdbProvenance, VerdictStatus,
+    ExecutionStatus, RunnerEnvironmentProvenance, RuntimeIdentity, SemanticValue,
+    SourceRevisionMethod, TzdbProvenance, VerdictStatus,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -33,7 +34,10 @@ pub struct CertificationProfile {
 pub struct ProfileCorpus {
     pub repository: String,
     pub branch: String,
-    pub sha: String,
+    #[serde(default, alias = "sha")]
+    pub expected_source_revision: Option<String>,
+    #[serde(default)]
+    pub canonical_digest: Option<String>,
     pub corpus_version: String,
     pub authority: String,
     pub vector_count: usize,
@@ -45,7 +49,8 @@ pub struct ProfileCorpus {
 pub struct ProfileTooling {
     pub repository: String,
     pub branch: String,
-    pub baseline_sha: String,
+    #[serde(default, alias = "baseline_sha")]
+    pub expected_source_revision: Option<String>,
     pub intended_source_policy: String,
     pub note: String,
 }
@@ -76,6 +81,14 @@ pub struct ProfileExecution {
     pub one_terminal_observation_per_build_vector: bool,
     pub vector_prefiltering: String,
     pub missing_capability_representation: String,
+    #[serde(default)]
+    pub environment_policy: Option<String>,
+    #[serde(default)]
+    pub host_timezone_setting: Option<String>,
+    #[serde(default)]
+    pub locale_policy: Option<String>,
+    #[serde(default)]
+    pub launch_resolution_policy: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -224,6 +237,7 @@ pub struct ProvenanceRecord {
     pub dialect_ids: Vec<String>,
     pub semantic_profile_claims: BTreeMap<String, SemanticValue>,
     pub tzdb_provenance: TzdbProvenance,
+    pub runner_environment: RunnerEnvironmentProvenance,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -274,8 +288,16 @@ pub struct DifferentialMatrix {
     pub schema_version: String,
     pub certification_id: String,
     pub certification_profile_version: String,
-    pub tooling_source_sha: String,
-    pub corpus_sha: String,
+    #[serde(alias = "tooling_source_sha")]
+    pub tooling_source_revision: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub tooling_source_revision_method: Option<SourceRevisionMethod>,
+    #[serde(alias = "corpus_sha")]
+    pub corpus_source_revision: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub corpus_source_revision_method: Option<SourceRevisionMethod>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub corpus_canonical_digest: Option<String>,
     pub corpus_version: String,
     pub runner_protocol_version: String,
     pub canonical_platform: String,
@@ -341,9 +363,17 @@ pub struct CertificationManifest {
     pub artifact_kind: String,
     pub certification_id: String,
     pub certification_profile_version: String,
-    pub tooling_source_sha: String,
+    #[serde(alias = "tooling_source_sha")]
+    pub tooling_source_revision: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub tooling_source_revision_method: Option<SourceRevisionMethod>,
     pub corpus_repository: String,
-    pub corpus_sha: String,
+    #[serde(alias = "corpus_sha")]
+    pub corpus_source_revision: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub corpus_source_revision_method: Option<SourceRevisionMethod>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub corpus_canonical_digest: Option<String>,
     pub corpus_version: String,
     pub runner_protocol_version: String,
     pub configured_builds: usize,

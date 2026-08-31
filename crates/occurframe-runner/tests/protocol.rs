@@ -5,8 +5,9 @@ use occurframe_runner::{
     RunnerSupervisor, TzdbReleaseKind, semantic_observation_digest, semantic_observation_ndjson,
 };
 use occurframe_wire::{
-    Classification, ComponentIdentity, DialectId, EngineOutcome, ExecutionStatus, Expectation,
-    Lifecycle, SemanticValue, TzdbProvenance, TzdbRelease, Vector, VerdictStatus,
+    CaseMessage, CaseProjection, Classification, ComponentIdentity, DialectId, EngineOutcome,
+    ExecutionStatus, Expectation, ExpectedCase, Lifecycle, RUNNER_PROTOCOL_VERSION, RunnerMessage,
+    SemanticValue, TzdbProvenance, TzdbRelease, Vector, VerdictStatus,
 };
 use serde_json::json;
 
@@ -17,7 +18,7 @@ fn schema() -> ProtocolSchema {
         "required": ["message", "protocol_version"],
         "properties": {
             "message": {"enum": ["hello", "case", "started", "result"]},
-            "protocol_version": {"const": "2.0"}
+            "protocol_version": {"const": "3.0"}
         }
     }))
     .expect("fixture schema")
@@ -26,10 +27,10 @@ fn schema() -> ProtocolSchema {
 fn build(mode: &str) -> RunnerBuild {
     RunnerBuild {
         build_id: format!("fake-{mode}"),
-        protocol_version: "2.0".into(),
+        protocol_version: "3.0".into(),
         runner: ComponentIdentity {
             name: "fake-runner".into(),
-            version: "2.0.0".into(),
+            version: "3.0.0".into(),
             provenance: Some("test fixture".into()),
         },
         engine: ComponentIdentity {
@@ -44,7 +45,11 @@ fn build(mode: &str) -> RunnerBuild {
             program: env!("CARGO_BIN_EXE_occurframe-fake-runner").into(),
             arguments: vec![mode.into()],
             working_directory: ".".into(),
-            environment: BTreeMap::new(),
+            environment: if mode == "environment" {
+                BTreeMap::from([("OCCURFRAME_DECLARED_SENTINEL".into(), "declared".into())])
+            } else {
+                BTreeMap::new()
+            },
         },
         supported_operations: vec!["cron.next".into(), "cron.parse".into()],
         dialect_ids: vec![DialectId("cron.vixie@1".into())],
@@ -77,7 +82,7 @@ fn build(mode: &str) -> RunnerBuild {
 fn vector(id: &str, expectation: Expectation, operation: &str) -> Vector {
     Vector {
         schema_version: "1.0.0".into(),
-        corpus_version: "1.0.0-rc2".into(),
+        corpus_version: "1.0.0-rc3".into(),
         id: id.into(),
         family: "test.fixture".into(),
         title: "runner contract fixture".into(),
@@ -100,6 +105,112 @@ fn execute(mode: &str, vector: &Vector, watchdog: Duration) -> occurframe_runner
     let mut runner =
         RunnerSupervisor::new(build(mode), PathBuf::from("."), schema(), watchdog, 1024);
     runner.execute(vector, 0)
+}
+
+#[test]
+fn every_expectation_mode_is_absent_from_runner_bound_bytes() {
+    let expected_case = || ExpectedCase {
+        label: "CHEAT_EXPECTED_SENTINEL_LABEL".into(),
+        when: BTreeMap::from([("cron.dst_gap".into(), SemanticValue::Text("skip".into()))]),
+        occurrences: Some(vec!["CHEAT_EXPECTED_SENTINEL".into()]),
+        note: Some("CHEAT_EXPECTED_SENTINEL_NOTE".into()),
+    };
+    let expectations = [
+        Expectation::Single {
+            occurrences: vec!["CHEAT_EXPECTED_SENTINEL".into()],
+            note: Some("CHEAT_EXPECTED_SENTINEL_NOTE".into()),
+        },
+        Expectation::PerPolicy {
+            cases: vec![expected_case()],
+            note: Some("CHEAT_EXPECTED_SENTINEL_NOTE".into()),
+        },
+        Expectation::PerDialect {
+            cases: vec![expected_case()],
+            note: Some("CHEAT_EXPECTED_SENTINEL_NOTE".into()),
+        },
+        Expectation::Admissible {
+            cases: vec![expected_case()],
+            note: Some("CHEAT_EXPECTED_SENTINEL_NOTE".into()),
+        },
+        Expectation::Reject {
+            error_class: Some("CHEAT_EXPECTED_SENTINEL_ERROR".into()),
+            note: Some("CHEAT_EXPECTED_SENTINEL_NOTE".into()),
+        },
+        Expectation::Open {
+            note: Some("CHEAT_EXPECTED_SENTINEL_NOTE".into()),
+        },
+    ];
+
+    for (index, expectation) in expectations.into_iter().enumerate() {
+        let mut authority_vector = vector("TEST-LEAK", expectation, "cron.next");
+        authority_vector.title = "CHEAT_EXPECTED_SENTINEL_TITLE".into();
+        authority_vector.rationale = "CHEAT_EXPECTED_SENTINEL_RATIONALE".into();
+        authority_vector.tags = vec!["CHEAT_EXPECTED_SENTINEL_TAG".into()];
+        let message = RunnerMessage::Case(CaseMessage {
+            protocol_version: RUNNER_PROTOCOL_VERSION.into(),
+            request_id: format!("leak-{index}"),
+            case: CaseProjection::try_from(&authority_vector).expect("valid projection"),
+            budget_ms: 8_000,
+        });
+        let bytes = serde_json::to_vec(&message).expect("serialize actual wire type");
+        let text = String::from_utf8(bytes).expect("JSON is UTF-8");
+        for prohibited in [
+            "CHEAT_EXPECTED_SENTINEL",
+            "expectation",
+            "classification",
+            "normative_evidence",
+            "rationale",
+            "tags",
+            "semantic_axes",
+            "scoring_mode",
+            "admissible_answers",
+        ] {
+            assert!(
+                !text.contains(prohibited),
+                "mode {index} leaked {prohibited}: {text}"
+            );
+        }
+    }
+}
+
+#[test]
+fn a_cheating_runner_cannot_recover_the_expected_answer() {
+    let case = vector(
+        "TEST-CHEAT",
+        Expectation::Single {
+            occurrences: vec!["CHEAT_EXPECTED_SENTINEL".into()],
+            note: Some("the runner must never receive this answer".into()),
+        },
+        "cron.next",
+    );
+    let record = execute("cheat", &case, Duration::from_secs(2));
+    assert!(matches!(
+        record.observation.engine_outcome,
+        Some(EngineOutcome::EngineError { ref diagnostic })
+            if diagnostic.code == "authority_data_absent"
+    ));
+    assert_ne!(record.verdict.status, VerdictStatus::Conformant);
+}
+
+#[test]
+fn the_spawned_runner_receives_only_the_deliberate_environment() {
+    let case = vector("TEST-ENV", Expectation::Open { note: None }, "cron.parse");
+    let record = execute("environment", &case, Duration::from_secs(2));
+    assert!(matches!(
+        record.observation.engine_outcome,
+        Some(EngineOutcome::Accepted)
+    ));
+    assert_eq!(
+        record
+            .observation
+            .runner_environment
+            .explicit_runner_variable_names,
+        vec!["OCCURFRAME_DECLARED_SENTINEL"]
+    );
+    assert_eq!(
+        record.observation.runner_environment.host_timezone_setting,
+        "UTC"
+    );
 }
 
 #[test]

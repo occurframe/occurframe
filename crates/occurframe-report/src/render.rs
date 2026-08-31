@@ -98,12 +98,12 @@ pub(crate) fn public_release_markdown(
     writeln!(output)?;
     writeln!(
         output,
-        "A divergence is not automatically a defect. The RC2 authority distinguishes normative answers, named policy differences, named dialect differences, standard ambiguity, known implementation divergence, and TZDB-provenance differences. Unsupported, engine errors, timeouts, and runner failures are excluded from semantic-answer grouping."
+        "A divergence is not automatically a defect. The RC3 authority distinguishes normative answers, named policy differences, named dialect differences, standard ambiguity, known implementation divergence, and TZDB-provenance differences. Unsupported, engine errors, timeouts, and runner failures are excluded from semantic-answer grouping."
     )?;
     writeln!(output)?;
     writeln!(
         output,
-        "RC2's measured divergence count is not required to reproduce Research II's earlier `157/184` headline. The engine population, protocol outcome taxonomy, provenance requirements, and scoring are more precise in protocol v2."
+        "RC3's measured divergence count is not required to reproduce Research II's earlier `157/184` headline. The engine population, protocol outcome taxonomy, provenance requirements, and scoring are more precise in protocol v3."
     )?;
     writeln!(output)?;
     writeln!(
@@ -174,7 +174,7 @@ pub(crate) fn differential_markdown(matrix: &DifferentialMatrix) -> Result<Vec<u
     writeln!(output)?;
     writeln!(
         output,
-        "This report is a derived view of protocol-v2 observations. The RC2 corpus remains normative authority; this report neither changes expectations nor ranks engines."
+        "This report is a derived view of protocol-v3 observations. The RC3 corpus remains normative authority; this report neither changes expectations nor ranks engines."
     )?;
     writeln!(output)?;
     writeln!(output, "## Certification identity and coverage")?;
@@ -187,13 +187,19 @@ pub(crate) fn differential_markdown(matrix: &DifferentialMatrix) -> Result<Vec<u
     )?;
     writeln!(
         output,
-        "- Tooling source SHA: `{}`",
-        matrix.tooling_source_sha
+        "- Tooling source revision: `{}` ({:?})",
+        matrix.tooling_source_revision, matrix.tooling_source_revision_method
     )?;
     writeln!(
         output,
-        "- Corpus: `{}` at `{}`",
-        matrix.corpus_version, matrix.corpus_sha
+        "- Corpus: `{}` at `{}` ({:?}), canonical digest `{}`",
+        matrix.corpus_version,
+        matrix.corpus_source_revision,
+        matrix.corpus_source_revision_method,
+        matrix
+            .corpus_canonical_digest
+            .as_deref()
+            .unwrap_or("unrecorded")
     )?;
     writeln!(
         output,
@@ -406,7 +412,7 @@ pub(crate) fn reconciliation_markdown(report: &ReconciliationReport) -> Result<V
     writeln!(output)?;
     writeln!(
         output,
-        "- Comparable protocol-v2 cells: {}",
+        "- Comparable protocol-v3 cells: {}",
         report.comparable_cells
     )?;
     writeln!(

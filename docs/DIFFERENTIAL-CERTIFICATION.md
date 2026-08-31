@@ -2,16 +2,19 @@
 
 ## Purpose and authority
 
-The RC2 differential certification measures the behavior of the preserved
-Phase II engine builds through runner protocol 2.0. It produces the candidate
-evidence base for Occurframe v1. It does not create semantic authority.
+The successor RC3 differential certification will measure the behavior of the
+preserved Phase II engine builds against the corrected RC3 corpus through
+expectation-blind runner protocol 3.0. It will produce a new candidate evidence
+base for Occurframe v1; it does not create semantic authority. The existing
+RC2 bundle remains immutable historical evidence and does not certify this
+boundary.
 
 The authority and evidence chain is:
 
 ```text
-RC2 specification, registries, vectors
+RC3 specification, registries, vectors
         -> validated vector
-        -> protocol-v2 external runner
+        -> expectation-blind protocol-v3 external runner
         -> normalized observation (evidence)
         -> occurframe-conformance verdict
         -> occurframe-report derived views
@@ -121,11 +124,32 @@ The native occurrence sequence is never sorted to manufacture stability.
 Volatile environment/container wrapper metadata is retained in
 `environment.json` but excluded from the semantic comparison.
 
-The canonical bundle is generated under `dist/certification/rc2/` with a
-manifest and `SHA256SUMS`. It is uploaded by the dedicated Full Differential
-Certification workflow and is not routinely committed.
+The successor bundle will be generated under `dist/certification/rc3/` with a
+manifest and `SHA256SUMS`. The dedicated Full Differential Certification
+workflow is manual preparation for the subsequent recertification task; this
+milestone does not run or publish it.
 
-The candidate public projection used by `0.1.0-rc2` is locked to the successful certification at tooling SHA `eeeb7fb822888cdba2e0e09a9c692bed8ca024b0`. It reports 25 configured builds, 23 reproducible builds, 184 vectors, 4,232 observations, 163 semantic-divergence vectors, and 76 normative-violation vectors. Its pathology inventory includes one timeout and eight engine errors; neither category is hidden or counted as a semantic answer. Release packaging verifies the certified matrix SHA and semantic bundle digest before rendering the public report.
+The manifest records the actual clean corpus and tooling source revisions
+independently from the canonical vector digest. Git checkout identity is
+observed from the checkout used by the run. When the copied tooling tree inside
+the container has no `.git`, the trusted host driver supplies the already
+observed clean checkout SHA as an `attested_input`; a profile value never
+substitutes for an observation. Expected and observed revisions must match or
+certification fails before evidence is written.
+
+Each runner process is launched under `hermetic_allowlist_v1`: the executable
+is resolved first, inherited environment is cleared, `TZ=UTC` and the C locale
+are applied deliberately, required platform/temp variables are added, and only
+the build's declared variables are overlaid. Observations record this policy and
+safe variable names, never arbitrary values or host secrets.
+
+The historical public projection used by `0.1.0-rc2` remains locked to the
+successful RC2 certification at tooling SHA
+`eeeb7fb822888cdba2e0e09a9c692bed8ca024b0`. It reports 25 configured builds,
+23 reproducible builds, 184 vectors, 4,232 observations, 163
+semantic-divergence vectors, and 76 normative-violation vectors. Its pathology
+inventory includes one timeout and eight engine errors; neither category is
+hidden or counted as a semantic answer. Those figures are not claims about RC3.
 
 ## Ruby status
 

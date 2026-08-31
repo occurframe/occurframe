@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 /// The runner protocol version implemented by this authority layer.
-pub const RUNNER_PROTOCOL_VERSION: &str = "2.0";
+pub const RUNNER_PROTOCOL_VERSION: &str = "3.0";
 /// The behavioural specification this tooling implements and measures against.
 ///
 /// The specification versions independently of the tooling, the corpus and the
@@ -72,6 +72,22 @@ pub enum SemanticValue {
     Boolean(bool),
 }
 
+/// Engine-relevant context copied into an expectation-blind runner case.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct SemanticContext {
+    #[serde(default)]
+    pub dialect: Option<String>,
+    #[serde(default)]
+    pub policy: BTreeMap<String, SemanticValue>,
+    #[serde(default)]
+    pub requires: Vec<String>,
+    #[serde(default)]
+    pub tzdb_min: Option<String>,
+    #[serde(default)]
+    pub tzdb_pin: Option<String>,
+}
+
 /// A named expected behavior under a particular semantic profile.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -121,7 +137,7 @@ pub enum Expectation {
     },
 }
 
-/// An authored RC2 conformance vector.
+/// An authority-owned canonical conformance vector.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Vector {
@@ -216,12 +232,42 @@ pub struct HelloMessage {
 }
 
 /// Authority-to-runner case message.
+///
+/// This is intentionally a different type from [`Vector`]. It has no field that
+/// can carry expectations, classification, evidence, rationale, tags, scoring
+/// mode, or an admissible-answer set.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct CaseProjection {
+    pub vector_id: String,
+    pub family: String,
+    pub operation: String,
+    pub input: Value,
+    pub semantic_context: SemanticContext,
+}
+
+impl TryFrom<&Vector> for CaseProjection {
+    type Error = serde_json::Error;
+
+    fn try_from(vector: &Vector) -> Result<Self, Self::Error> {
+        Ok(Self {
+            vector_id: vector.id.clone(),
+            family: vector.family.clone(),
+            operation: vector.operation.clone(),
+            input: vector.input.clone(),
+            semantic_context: serde_json::from_value(vector.context.clone())?,
+        })
+    }
+}
+
+/// Authority-to-runner expectation-blind case message.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct CaseMessage {
     pub protocol_version: String,
     pub request_id: String,
-    pub vector: Vector,
+    #[serde(flatten)]
+    pub case: CaseProjection,
     pub budget_ms: u64,
 }
 
@@ -284,6 +330,44 @@ pub enum ExecutionStatus {
     RunnerFailure,
 }
 
+/// How an executable was resolved before the child environment was cleared.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum LaunchResolutionMethod {
+    AbsolutePath,
+    RepositoryRelative,
+    SearchPath,
+}
+
+/// Safe operational provenance for the runner environment. Values belonging to
+/// arbitrary build variables are never recorded.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct RunnerEnvironmentProvenance {
+    pub environment_policy: String,
+    pub host_timezone_setting: String,
+    pub locale_policy: String,
+    pub launch_resolution_method: LaunchResolutionMethod,
+    pub platform_variable_names: Vec<String>,
+    pub explicit_runner_variable_names: Vec<String>,
+}
+
+/// Mechanism by which a source revision was observed or supplied.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum SourceRevisionMethod {
+    GitCheckout,
+    AttestedInput,
+}
+
+/// Source identity is independent from semantic-content identity.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct SourceRevision {
+    pub revision: String,
+    pub method: SourceRevisionMethod,
+}
+
 /// A normalized, portable engine observation.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -297,6 +381,7 @@ pub struct NormalizedObservation {
     pub dialect_ids: Vec<DialectId>,
     pub semantic_profile_claims: BTreeMap<String, SemanticValue>,
     pub tzdb_provenance: TzdbProvenance,
+    pub runner_environment: RunnerEnvironmentProvenance,
     pub execution_status: ExecutionStatus,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub engine_outcome: Option<EngineOutcome>,

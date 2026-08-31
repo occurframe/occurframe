@@ -1,10 +1,10 @@
-# Minimal protocol-v2 runner
+# Minimal protocol-v3 runner
 
 **Protocol example only — not a recurrence engine and not a conformance
 reference.**
 
 This directory is the smallest complete demonstration of Occurframe's runner
-protocol `2.0`. It exists so that an engine maintainer can watch the whole
+protocol `3.0`. It exists so that an engine maintainer can watch the whole
 handshake — `hello`, `case`, `started`, `result` — happen against the real
 `occurframe test` command before wiring up an actual engine.
 
@@ -31,7 +31,7 @@ oframe    test --engine example.minimal --family cron.anchoring --family cron.in
 Expected result: two conformant vectors and fourteen unsupported ones, exit
 code `0`.
 
-* `CRON-ANCH-001` answers `occurrences`. The fixture replays the authored RC2
+* `CRON-ANCH-001` answers `occurrences`. The fixture replays the authored RC3
   expectation for the `exclusive` start-inclusivity policy, which is the policy
   this example declares in its `hello`, so the scorer records it as conformant.
 * `CRON-INV-001` answers `rejection`, matching an authored `reject` expectation.
@@ -50,7 +50,7 @@ export OCCURFRAME_RUNNER_ROOT=/srv/engines/my-engine
 
 To run against a corpus other than the one bundled with the release, pass
 `--corpus /path/to/corpus` or set `OCCURFRAME_CORPUS`. Either way the corpus must
-still match the RC2 identity the tooling pins.
+still match the RC3 identity the tooling pins.
 
 ## What the registry entry has to line up with
 
@@ -98,7 +98,7 @@ from the launch line, and the identity check then means something.
 
 ## Writing your own
 
-`docs/WRITING-A-RUNNER.md` is the normative description of protocol `2.0`:
+`docs/WRITING-A-RUNNER.md` is the normative description of protocol `3.0`:
 message shapes, the five terminal outcomes and when each one is correct, the
 identity and provenance rules, and the budget and watchdog boundaries. Read that
 before adapting this file. `runner.py` is deliberately short enough to read in

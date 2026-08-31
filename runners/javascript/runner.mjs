@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-// Protocol-v2 adapter for the six JavaScript configurations measured in Phase II RC1.
+// Protocol-v3 adapter for the six JavaScript configurations measured in Phase II RC1.
 import readline from 'node:readline'
 import { CronExpressionParser } from 'cron-parser'
 import { Cron } from 'croner'
@@ -7,7 +7,7 @@ import cronstrue from 'cronstrue'
 import { rrulestr } from 'rrule'
 import { DateTime } from 'luxon'
 
-const PROTOCOL = '2.0'
+const PROTOCOL = '3.0'
 const ENGINE_NAME = option('engine')
 if (!ENGINE_NAME) throw new Error('--engine is required')
 
@@ -156,7 +156,7 @@ const runtime = globalThis.Bun
 
 emit({
   message: 'hello', protocol_version: PROTOCOL,
-  runner: { name: 'occurframe-javascript-runner', version: '2.0.0', provenance: 'source:runners/javascript/runner.mjs' },
+  runner: { name: 'occurframe-javascript-runner', version: '3.0.0', provenance: 'source:runners/javascript/runner.mjs' },
   engine: { name: ENGINE_NAME, version: engine.version, provenance: engine.provenance },
   runtime, capabilities: engine.operations, dialect_ids: engine.dialects,
   semantic_profile_claims: engine.profile, tzdb_provenance: tzdbProvenance(),
@@ -168,9 +168,15 @@ for await (const line of input) {
   try {
     const message = JSON.parse(line)
     if (message.message !== 'case' || message.protocol_version !== PROTOCOL) {
-      throw new Error('expected protocol-v2 case')
+      throw new Error('expected protocol-v3 case')
     }
-    const vector = message.vector
+    const vector = {
+      id: message.vector_id,
+      family: message.family,
+      operation: message.operation,
+      input: message.input,
+      context: message.semantic_context,
+    }
     const operation = vector.operation
     const probe = operation === 'cron.parse' ? 'cron.next'
       : operation === 'rrule.parse' ? 'rrule.expand' : operation

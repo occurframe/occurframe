@@ -95,7 +95,7 @@ enum TzdbRequirement {
 #[serde(deny_unknown_fields)]
 struct CorpusLock {
     corpus_repository: String,
-    corpus_sha: String,
+    expected_source_revision: String,
     corpus_version: String,
     canonical_digest: String,
     release_digest: String,
@@ -246,7 +246,7 @@ fn top_level_help() -> String {
 }
 
 fn test_help() -> String {
-    "USAGE:\n    occurframe test --engine <adapter> [OPTIONS]\n\nOPTIONS:\n    --engine <adapter>  Stable configured protocol-v2 runner build ID\n    --corpus <path>     Authored corpus checkout or packed distribution\n    --family <family>   Select a corpus family; may be repeated\n    --tzdb <requirement>  any, exact:<release>, bounded, unknown, known, or source:<name>\n    --format <format>   text, json, or junit\n    --no-color         Disable text color (also honored through NO_COLOR)\n    -h, --help         Print help\n"
+    "USAGE:\n    occurframe test --engine <adapter> [OPTIONS]\n\nOPTIONS:\n    --engine <adapter>  Stable configured protocol-v3 runner build ID\n    --corpus <path>     Authored corpus checkout or packed distribution\n    --family <family>   Select a corpus family; may be repeated\n    --tzdb <requirement>  any, exact:<release>, bounded, unknown, known, or source:<name>\n    --format <format>   text, json, or junit\n    --no-color         Disable text color (also honored through NO_COLOR)\n    -h, --help         Print help\n"
         .into()
 }
 
@@ -427,7 +427,7 @@ fn validate_corpus_lock(
         || corpus.canonical_corpus_digest != lock.canonical_digest
         || corpus.vectors.len() != lock.vector_count
         || lock.corpus_repository != "https://github.com/occurframe/corpus"
-        || lock.corpus_sha.len() != 40
+        || lock.expected_source_revision.len() != 40
         || lock.release_digest.len() != 64
     {
         return Err(CliError::environment(format!(
@@ -475,7 +475,7 @@ fn bundle_root() -> Option<PathBuf> {
 const BUNDLED_CORPUS: &str = "corpus";
 /// The bundled adapter-identity registry produced by `xtask release-package`.
 const BUNDLED_REGISTRY: &str = "adapters/runner-builds.json";
-const PROTOCOL_SCHEMA: &str = "schemas/runner-protocol-v2.schema.json";
+const PROTOCOL_SCHEMA: &str = "schemas/runner-protocol-v3.schema.json";
 
 fn is_corpus_directory(path: &Path) -> bool {
     path.join("manifest.json").is_file() || path.join("vectors").is_dir()
@@ -1074,16 +1074,16 @@ mod tests {
         assert!(version.starts_with(&format!("occurframe {TOOL_VERSION}\n")));
         assert!(version.contains(&format!("specification {SPECIFICATION_VERSION}")));
         assert!(version.contains(&format!("runner-protocol {RUNNER_PROTOCOL_VERSION}")));
-        assert!(version.contains("corpus 1.0.0-rc2"));
+        assert!(version.contains("corpus 1.0.0-rc3"));
     }
 
     #[test]
-    fn the_embedded_corpus_lock_pins_the_certified_rc2_identity() {
+    fn the_embedded_corpus_lock_pins_the_corrected_rc3_identity() {
         let lock = embedded_corpus_lock().expect("embedded corpus lock parses");
-        assert_eq!(lock.corpus_version, "1.0.0-rc2");
+        assert_eq!(lock.corpus_version, "1.0.0-rc3");
         assert_eq!(
             lock.canonical_digest,
-            "4804772d20fb36c7329b2c5f2f28e264d9bc00b11e407e76d9836fc38cd80470"
+            "c0a9cf0587c02ce5022cbb94d060e14d5b9d6f99c3210e512965f35062c4dfe0"
         );
         assert_eq!(lock.vector_count, 184);
         assert_eq!(
@@ -1217,39 +1217,39 @@ mod tests {
         let expected = BTreeMap::from([
             (
                 "text_success",
-                "b68cf35cdcf530262c2ce53db2668504df94ba7ef923b247fa2b5a614d9f274a",
+                "9e91079bdc8007f2029a23514c633337b43f68fd62a52a12183b907b02c648ea",
             ),
             (
                 "text_failure",
-                "d51aa7a974696cfc39485593b4558c8446ec00b4252b332e6b68926f05e17508",
+                "2c6411c2c61e6f66673f864bad66a74f171a8bfd04d41fc82011e5697ca58d63",
             ),
             (
                 "json_success",
-                "2bf889d38ce8ecd9c8c270c5aeaad91a1a5be2077854ec4ae2a51e5e2e8b3f3e",
+                "3647d744dc8a9f42fadb3ffe629b94d7745a3011ba706c646256bf2cca22c1de",
             ),
             (
                 "json_mixed",
-                "925cea74d3e89bc57246f150164c2383a57e35b690d23632182f0fd9df3ff3b4",
+                "737837760081fe2724e4e2f18be73809572d776f45996e2c998741b639c7a470",
             ),
             (
                 "junit",
-                "571389aaf8c552b0e2daf828135059476c4a313712bd47da04c83fc1d11763e7",
+                "821a4f8e90da645b82623e3cf60c6bf8fbfc5eb5a037a98c287abcc625516387",
             ),
             (
                 "json_unsupported",
-                "b3ff68aeca1ced45c98c4589e81591264e54683ebab484acdd72680dca94c230",
+                "ae1030c91ac55023fca800d1de835e80fd32822fc2312762bf5ffa5e99086dd3",
             ),
             (
                 "json_engine_error",
-                "6f016d8699bf36d5b1bc240935eaa1d5e81d08756dfb7317ef8860bfd46c245d",
+                "1fff5669556dcd538f1299b396f46c548dd36818b3b485186446f9b60591ddcb",
             ),
             (
                 "json_timeout",
-                "e2f0e22f15dadb419f8733644973529b5fe90710f116ba506011f438ffbf7eaa",
+                "5d19c0c7bf8e0b528378f8dbcbc7801de487e9af784db7df48ef320afccc0fe9",
             ),
             (
                 "json_runner_failure",
-                "46354b627f25995ab535043340e8237fd02cb0d7ec4950ab5a3b2820d66d7706",
+                "6acb4b1edd3138fdb500236742f1d3d8b15ac963056568c0acae6d05ead2daac",
             ),
         ]);
         let actual = outputs
@@ -1354,11 +1354,11 @@ mod tests {
             schema_version: "1.0.0".into(),
             tooling_version: TOOL_VERSION.into(),
             specification_version: SPECIFICATION_VERSION.into(),
-            runner_protocol_version: "2.0".into(),
+            runner_protocol_version: "3.0".into(),
             corpus: CorpusIdentity {
-                version: "1.0.0-rc2".into(),
+                version: "1.0.0-rc3".into(),
                 canonical_digest:
-                    "4804772d20fb36c7329b2c5f2f28e264d9bc00b11e407e76d9836fc38cd80470".into(),
+                    "c0a9cf0587c02ce5022cbb94d060e14d5b9d6f99c3210e512965f35062c4dfe0".into(),
                 selected_vectors: results.len(),
                 families: vec!["fixture.family".into()],
             },
@@ -1366,7 +1366,7 @@ mod tests {
                 build_id: "fixture.engine".into(),
                 runner: ComponentIdentity {
                     name: "fixture-runner".into(),
-                    version: "2.0.0".into(),
+                    version: "3.0.0".into(),
                     provenance: Some("fixture".into()),
                 },
                 engine: ComponentIdentity {

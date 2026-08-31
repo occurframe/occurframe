@@ -6,8 +6,9 @@ use std::{
 };
 
 use occurframe_conformance::{
-    PackReport, canonical_pretty_json, load_and_validate_corpus, migrate_rc1, pack_release,
-    sha256_hex, verify_deterministic_pack, verify_manifest, verify_migration, write_tree_checksums,
+    PackReport, canonical_corpus_digest, canonical_pretty_json, load_and_validate_corpus,
+    migrate_rc1, observe_source_revision, pack_release, sha256_hex, verify_deterministic_pack,
+    verify_manifest, verify_migration, write_tree_checksums,
 };
 use occurframe_report::{
     BundleInput, CertificationManifest, DifferentialMatrix, generate_bundle, load_json,
@@ -145,6 +146,20 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
             let (corpus, _) = load_and_validate_corpus(&corpus_path)?;
             let registry = RunnerRegistry::load(&options.required("registry")?)?;
             let profile = load_profile(&options.required("profile")?)?;
+            let repository_root = options.required("root")?;
+            let corpus_attestation = options.optional_string("corpus-attested-source-revision");
+            let tooling_attestation = options.optional_string("tooling-attested-source-revision");
+            let corpus_source = observe_source_revision(
+                &corpus_path,
+                profile.corpus.expected_source_revision.as_deref(),
+                corpus_attestation.as_deref(),
+            )?;
+            let tooling_source = observe_source_revision(
+                &repository_root,
+                profile.tooling.expected_source_revision.as_deref(),
+                tooling_attestation.as_deref(),
+            )?;
+            let corpus_canonical_digest = canonical_corpus_digest(&corpus.vectors)?;
             let builds: Vec<_> = registry
                 .builds
                 .iter()
@@ -155,7 +170,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
             let records = run_batch(
                 &builds,
                 &corpus.vectors,
-                &options.required("root")?,
+                &repository_root,
                 &schema,
                 std::time::Duration::from_millis(profile.execution.infrastructure_watchdog_ms),
             );
@@ -173,7 +188,9 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                     corpus: &corpus,
                     executions: &records,
                     environment: &environment,
-                    tooling_source_sha: &options.required_string("tooling-sha")?,
+                    tooling_source: &tooling_source,
+                    corpus_source: &corpus_source,
+                    corpus_canonical_digest: &corpus_canonical_digest,
                     legacy_matrix: &legacy_matrix,
                     legacy_build_map: &legacy_build_map,
                     observation_schema: &observation_schema,
@@ -688,6 +705,10 @@ fn package_release_candidate(
         output.join("corpus/schemas/runner-protocol-v2.schema.json"),
     )?;
     fs::copy(
+        corpus_root.join("schemas/runner-protocol-v3.schema.json"),
+        output.join("corpus/schemas/runner-protocol-v3.schema.json"),
+    )?;
+    fs::copy(
         repository_root.join("runners/registry/runner-builds.json"),
         output.join("adapters/runner-builds.json"),
     )?;
@@ -903,10 +924,10 @@ fn validate_release_evidence(
     matrix_bytes: &[u8],
 ) -> Result<(), Box<dyn std::error::Error>> {
     let certification = &lock.certification;
-    let manifest_matches = manifest.tooling_source_sha == certification.tooling_source_sha
+    let manifest_matches = manifest.tooling_source_revision == certification.tooling_source_sha
         && manifest.certification_profile_version == certification.profile_version
         && manifest.semantic_bundle_digest == certification.semantic_bundle_digest
-        && manifest.corpus_sha == lock.corpus.sha
+        && manifest.corpus_source_revision == lock.corpus.sha
         && manifest.corpus_version == lock.corpus.version
         && manifest.configured_builds == certification.configured_builds
         && manifest.reproducible_builds == certification.reproducible_builds
@@ -990,11 +1011,11 @@ fn prepare_source_example_corpus(
     let corpus = pack_release(corpus_root, packed_corpus)?;
     verify_manifest(packed_corpus)?;
 
-    let source = corpus_root.join("schemas/runner-protocol-v2.schema.json");
+    let source = corpus_root.join("schemas/runner-protocol-v3.schema.json");
     if !source.is_file() {
         return Err(format!("missing runner protocol schema: {}", source.display()).into());
     }
-    let protocol_schema = packed_corpus.join("schemas/runner-protocol-v2.schema.json");
+    let protocol_schema = packed_corpus.join("schemas/runner-protocol-v3.schema.json");
     fs::create_dir_all(
         protocol_schema
             .parent()
@@ -1253,7 +1274,7 @@ fn adapter_migration_report(
     ]);
     Ok(serde_json::json!({
         "artifact_kind": "adapter_migration_report_not_differential_matrix",
-        "protocol_version": "2.0",
+        "protocol_version": occurframe_wire::RUNNER_PROTOCOL_VERSION,
         "language_runners_migrated": languages,
         "engine_builds_configured": registry.builds.len(),
         "engine_builds_reproducible": reproducible.len(),
@@ -1426,10 +1447,10 @@ mod tests {
         assert_eq!(preparation.corpus.vector_count, 184);
         assert_eq!(
             preparation.corpus.canonical_corpus_digest,
-            "4804772d20fb36c7329b2c5f2f28e264d9bc00b11e407e76d9836fc38cd80470"
+            "c0a9cf0587c02ce5022cbb94d060e14d5b9d6f99c3210e512965f35062c4dfe0"
         );
         assert_eq!(
-            fs::read(corpus_root.join("schemas/runner-protocol-v2.schema.json"))
+            fs::read(corpus_root.join("schemas/runner-protocol-v3.schema.json"))
                 .expect("authority schema"),
             fs::read(&preparation.protocol_schema).expect("staged schema")
         );

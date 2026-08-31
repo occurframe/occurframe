@@ -166,6 +166,14 @@ jq -S -n \
      },
      runtimes: $runtimes,
      orchestration_toolchain: { rustc: $rust },
+     runner_environment_policy: {
+       name: "hermetic_allowlist_v1",
+       launch_resolution: "resolve_before_environment_clear",
+       inherited_environment: "cleared",
+       deliberate_timezone: "UTC",
+       locale_policy: "fixed_c",
+       explicit_build_variables: "names recorded per observation; values excluded"
+     },
      tzdb_provenance_sources: {
        system_zoneinfo: $system_zoneinfo,
        python_tzdata_package: $python_tzdata_package,

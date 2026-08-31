@@ -19,11 +19,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Check out pinned RC2 authority
+      - name: Check out corrected RC3 authority
         uses: actions/checkout@v4
         with:
           repository: occurframe/corpus
-          ref: f5026940fcc667b1892e99f3abe95b424931bed0
+          ref: cf45a0bbcb7bbb1d37e03652d49841ee106bcc6b
           path: corpus
 
       - uses: dtolnay/rust-toolchain@stable
@@ -90,12 +90,12 @@ jobs:
           git clone --filter=blob:none https://github.com/rlanvin/php-rrule.git runners/php/.adapter-deps/php-rrule
           git -C runners/php/.adapter-deps/php-rrule checkout 93a083db12dcb6f58e4840392a22e158ce96f1ff
 
-      - name: Run representative protocol-v2 smoke
+      - name: Run representative protocol-v3 smoke
         run: >-
           cargo run -p xtask -- runner-smoke-all
           --root .
           --corpus corpus
-          --schema corpus/schemas/runner-protocol-v2.schema.json
+          --schema corpus/schemas/runner-protocol-v3.schema.json
           --registry runners/registry/runner-builds.json
           --output smoke-artifacts/normalized-observations.ndjson
           --diagnostics smoke-artifacts/runner-diagnostics.json

@@ -118,16 +118,16 @@ filesystem.
 **Protocol schema**, first match wins:
 
 1. `OCCURFRAME_RUNNER_PROTOCOL_SCHEMA`
-2. `<corpus>/schemas/runner-protocol-v2.schema.json`
-3. `<bundle>/corpus/schemas/runner-protocol-v2.schema.json`
-4. `<runner root>/../corpus/schemas/runner-protocol-v2.schema.json`
+2. `<corpus>/schemas/runner-protocol-v3.schema.json`
+3. `<bundle>/corpus/schemas/runner-protocol-v3.schema.json`
+4. `<runner root>/../corpus/schemas/runner-protocol-v3.schema.json`
 
 ## Environment variables
 
 | Variable | Effect |
 | --- | --- |
 | `OCCURFRAME_CORPUS` | Corpus checkout or packed distribution to use. |
-| `OCCURFRAME_RUNNER_REGISTRY` | Protocol-v2 registry file describing engine builds. |
+| `OCCURFRAME_RUNNER_REGISTRY` | Protocol-v3 registry file describing engine builds. |
 | `OCCURFRAME_RUNNER_ROOT` | Base directory for relative launch paths. |
 | `OCCURFRAME_RUNNER_PROTOCOL_SCHEMA` | Protocol schema, when not beside the corpus. |
 | `NO_COLOR` | Accepted; currently has no observable effect (see above). |

@@ -10,10 +10,11 @@ use serde_json::{Map, Value, json};
 
 use crate::{
     Error, Result, canonical_json_line, canonical_pretty_json,
+    corpus::load_and_validate_corpus_version,
     corpus::{
         AxisEntry, AxisRegistry, SourceEntry, SourceRegistry, VectorIdEntry, VectorIdRegistry,
     },
-    load_and_validate_corpus, sha256_hex,
+    sha256_hex,
 };
 
 const RC2_SCHEMA_VERSION: &str = "1.0.0";
@@ -107,7 +108,7 @@ pub fn migrate_rc1(legacy_vectors: &Path, corpus_root: &Path) -> Result<Migratio
 pub fn verify_migration(legacy_vectors: &Path, corpus_root: &Path) -> Result<MigrationReport> {
     let records = read_rc1(legacy_vectors)?;
     let expected = build_expected(&records)?;
-    let (corpus, validation) = load_and_validate_corpus(corpus_root)?;
+    let (corpus, validation) = load_and_validate_corpus_version(corpus_root, RC2_CORPUS_VERSION)?;
 
     let expected_by_id: BTreeMap<_, _> = expected
         .vectors

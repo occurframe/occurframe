@@ -58,16 +58,16 @@ fn packed_corpus() -> &'static Path {
             .join(std::process::id().to_string());
         let report = occurframe_conformance::pack_release(&corpus_root(), &output)
             .expect("pack immutable RC2 corpus");
-        assert_eq!(report.corpus_version, "1.0.0-rc2");
+        assert_eq!(report.corpus_version, "1.0.0-rc3");
         assert_eq!(report.vector_count, 184);
         assert_eq!(
             report.canonical_corpus_digest,
-            "4804772d20fb36c7329b2c5f2f28e264d9bc00b11e407e76d9836fc38cd80470"
+            "c0a9cf0587c02ce5022cbb94d060e14d5b9d6f99c3210e512965f35062c4dfe0"
         );
         fs::create_dir_all(output.join("schemas")).expect("packed schema directory");
         fs::copy(
-            corpus_root().join("schemas/runner-protocol-v2.schema.json"),
-            output.join("schemas/runner-protocol-v2.schema.json"),
+            corpus_root().join("schemas/runner-protocol-v3.schema.json"),
+            output.join("schemas/runner-protocol-v3.schema.json"),
         )
         .expect("copy authority schema");
         output
@@ -87,8 +87,8 @@ fn registry(mode: &str) -> PathBuf {
         "schema_version": "1.0.0",
         "builds": [{
             "build_id": format!("fixture.{mode}"),
-            "protocol_version": "2.0",
-            "runner": {"name":"cli-fixture-runner","version":"2.0.0","provenance":"source:occurframe-cli/tests/fixtures/protocol_runner.rs"},
+            "protocol_version": "3.0",
+            "runner": {"name":"cli-fixture-runner","version":"3.0.0","provenance":"source:occurframe-cli/tests/fixtures/protocol_runner.rs"},
             "engine": {"name":"cli-fixture-engine","version":"1.0.0","provenance":"deterministic test fixture"},
             "language": "Rust",
             "runtime_name": "rustc-fixture",
@@ -150,11 +150,11 @@ fn invoke_with_corpus(
 fn packed_corpus_version_digest_count_and_cli_execution_are_verified() {
     let packed = occurframe_conformance::load_compatible_corpus(packed_corpus())
         .expect("load packed corpus");
-    assert_eq!(packed.corpus_version, "1.0.0-rc2");
+    assert_eq!(packed.corpus_version, "1.0.0-rc3");
     assert_eq!(packed.vectors.len(), 184);
     assert_eq!(
         packed.canonical_corpus_digest,
-        "4804772d20fb36c7329b2c5f2f28e264d9bc00b11e407e76d9836fc38cd80470"
+        "c0a9cf0587c02ce5022cbb94d060e14d5b9d6f99c3210e512965f35062c4dfe0"
     );
     let output = invoke_with_corpus(
         env!("CARGO_BIN_EXE_occurframe"),
@@ -241,12 +241,12 @@ fn both_aliases_ship_exactly_one_semantic_command() {
         assert_eq!(version.status.code(), Some(0));
         let version_text = String::from_utf8(version.stdout).expect("UTF-8");
         assert!(
-            version_text.starts_with("occurframe 0.1.0-rc2\n"),
+            version_text.starts_with("occurframe 0.1.0-rc3\n"),
             "{version_text}"
         );
         assert!(version_text.contains("specification 1.0.0-rc1"));
-        assert!(version_text.contains("runner-protocol 2.0"));
-        assert!(version_text.contains("corpus 1.0.0-rc2"));
+        assert!(version_text.contains("runner-protocol 3.0"));
+        assert!(version_text.contains("corpus 1.0.0-rc3"));
 
         let baseline = Command::new(binary)
             .arg("definitely-not-a-command")
@@ -315,9 +315,9 @@ fn every_output_format_carries_the_specification_version() {
     let report: serde_json::Value =
         serde_json::from_slice(&json.stdout).expect("deterministic JSON report");
     assert_eq!(report["specification_version"], "1.0.0-rc1");
-    assert_eq!(report["tooling_version"], "0.1.0-rc2");
-    assert_eq!(report["runner_protocol_version"], "2.0");
-    assert_eq!(report["corpus"]["version"], "1.0.0-rc2");
+    assert_eq!(report["tooling_version"], "0.1.0-rc3");
+    assert_eq!(report["runner_protocol_version"], "3.0");
+    assert_eq!(report["corpus"]["version"], "1.0.0-rc3");
 
     let junit = invoke(env!("CARGO_BIN_EXE_occurframe"), "success", "junit");
     let junit_text = String::from_utf8(junit.stdout).expect("UTF-8");

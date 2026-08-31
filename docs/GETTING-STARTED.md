@@ -74,7 +74,7 @@ cat VERSION
 ```text
 Occurframe tooling: 0.1.0-rc2
 Specification:      1.0.0-rc1
-Corpus:             1.0.0-rc2
+Corpus:             1.0.0-rc3
 Runner protocol:    2.0
 Certification:      rc2.1
 Commit:             <exact released commit>
@@ -92,8 +92,8 @@ grep -o '"corpus_version": "[^"]*"' corpus/manifest.json
 grep -o '"canonical_corpus_digest": "[^"]*"' corpus/manifest.json
 ```
 
-Corpus `1.0.0-rc2` has canonical digest
-`4804772d20fb36c7329b2c5f2f28e264d9bc00b11e407e76d9836fc38cd80470` and 184
+Corpus `1.0.0-rc3` has canonical digest
+`c0a9cf0587c02ce5022cbb94d060e14d5b9d6f99c3210e512965f35062c4dfe0` and 184
 vectors. Occurframe re-derives that digest from the vectors it actually loads and
 refuses to run if it does not match, so a tampered or mismatched corpus is a
 hard failure rather than a quiet difference in results.
@@ -132,8 +132,8 @@ handshake work. When you are ready to test something real, read
 Occurframe conformance result
 engine: occurframe-example-fixture
 engine version: 0.0.0-example
-corpus version: 1.0.0-rc2
-corpus digest: 4804772d20fb36c7329b2c5f2f28e264d9bc00b11e407e76d9836fc38cd80470
+corpus version: 1.0.0-rc3
+corpus digest: c0a9cf0587c02ce5022cbb94d060e14d5b9d6f99c3210e512965f35062c4dfe0
 ...
 selected vectors: 16
 conformant: 2

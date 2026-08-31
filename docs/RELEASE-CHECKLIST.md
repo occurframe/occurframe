@@ -1,5 +1,11 @@
 # Release checklist (owner-controlled)
 
+> **Historical RC2 checklist — not current release authority.** The corrected
+> RC3 corpus, expectation-blind protocol 3.0, observed source provenance, and
+> hermetic execution boundary are awaiting a new full certification and
+> successor evidence lock. Do not execute the RC2 commands below for the current
+> product.
+
 Publication is owner-controlled. Nothing in this repository publishes anything:
 CI builds, verifies and uploads artifacts, and stops. This checklist is the
 sequence a repository owner performs by hand.

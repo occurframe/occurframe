@@ -1,4 +1,4 @@
-# JavaScript protocol-v2 runner
+# JavaScript protocol-v3 runner
 
 The certification runtime is Bun 1.3.13. `npm ci` restores the exact package
 artifacts and runtime from `package-lock.json`; Bun then executes offline from `node_modules`.

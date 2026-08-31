@@ -16,6 +16,7 @@ mod migration;
 mod observation;
 mod pack;
 mod scoring;
+mod source;
 
 pub use canonical::{canonical_json, canonical_json_line, canonical_pretty_json, sha256_hex};
 pub use corpus::{Corpus, ValidationReport, load_and_validate_corpus, validate_schemas};
@@ -29,6 +30,7 @@ pub use pack::{
     verify_manifest, write_tree_checksums,
 };
 pub use scoring::score;
+pub use source::observe_source_revision;
 
 use std::io;
 
@@ -45,6 +47,8 @@ pub enum Error {
     Validation(String),
     #[error("migration error: {0}")]
     Migration(String),
+    #[error("source provenance error: {0}")]
+    SourceProvenance(String),
 }
 
 /// Crate-wide result type.

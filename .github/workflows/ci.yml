@@ -15,11 +15,11 @@ jobs:
       OCCURFRAME_TEST_CORPUS: ${{ github.workspace }}/corpus-authority
     steps:
       - uses: actions/checkout@v4
-      - name: Check out immutable RC2 authority
+      - name: Check out corrected RC3 authority
         uses: actions/checkout@v4
         with:
           repository: occurframe/corpus
-          ref: f5026940fcc667b1892e99f3abe95b424931bed0
+          ref: cf45a0bbcb7bbb1d37e03652d49841ee106bcc6b
           path: corpus-authority
       - uses: dtolnay/rust-toolchain@stable
         with:
