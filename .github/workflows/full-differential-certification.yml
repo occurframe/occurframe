@@ -54,6 +54,13 @@ jobs:
           -CorpusPath ./corpus
           -Script certification/docker/tasks/full-certification.sh
 
+      # The canonical container runs as root and writes through a bind mount.
+      # Return only the generated output tree to the hosted runner account so
+      # subsequent deterministic reconciliation can add its checked artifact.
+      - name: Transfer generated evidence ownership
+        shell: bash
+        run: sudo chown -R "$(id -u):$(id -g)" dist/certification
+
       - name: Restore locked RC2 and RC3 evidence
         shell: bash
         run: |
