@@ -80,6 +80,21 @@ mkdir -p dist/certification && tar -xzf certification/rc2-evidence.tar.gz -C dis
 cargo run -p xtask -- verify-evidence-archive --root . --lock release/evidence-lock.json --extracted dist/certification/rc2
 ```
 
+The archive is rebuilt — if it ever has to be — with modes normalised the way
+`X` normalises them, so directories keep their search bit:
+
+```text
+tar --sort=name --mtime='@0' --owner=0 --group=0 --numeric-owner \
+    --mode='u=rwX,go=rX' -cf - rc2 | gzip -9n > certification/rc2-evidence.tar.gz
+```
+
+`--mode='u=rw,go=r'` looks equivalent and is not: it clears the search bit on
+the directory too. Extraction still succeeds, `root` still reads every file
+through the unsearchable directory, and every unprivileged consumer — hosted CI
+included — gets `EACCES` instead. `verify-evidence-archive --extracted` checks
+the restored modes for exactly this reason, so a developer running as `root`
+fails where a consumer would.
+
 Release-candidate packaging is deterministic and refuses evidence, corpus, or binaries that differ from `release/evidence-lock.json`:
 
 ```text

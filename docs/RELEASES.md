@@ -92,7 +92,10 @@ cargo run -p xtask -- verify-evidence-archive --root . --lock release/evidence-l
 
 The first call refuses a modified archive before anything is unpacked; the third
 re-verifies every extracted file against the certification bundle's own
-`SHA256SUMS`. `certification.artifact_name` in the lock remains as provenance —
+`SHA256SUMS` and checks that the restored tree is readable without privilege —
+an archive that recorded its directory without a search bit passes every
+checksum and is still unusable to anyone who is not `root`.
+`certification.artifact_name` in the lock remains as provenance —
 it records which certification run produced the evidence — and is no longer a
 fetch location.
 

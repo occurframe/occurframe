@@ -418,7 +418,8 @@ struct EvidenceArchiveReport {
 /// This is what replaces a dependency on an expiring CI artifact. The archive is
 /// checked by digest before anything is unpacked, and — when an already-extracted
 /// directory is supplied — every file inside it is re-verified against the
-/// certification bundle's own `SHA256SUMS`.
+/// certification bundle's own `SHA256SUMS`, and proven readable without
+/// privilege.
 fn verify_evidence_archive(
     repository_root: &Path,
     lock_path: &Path,
@@ -442,6 +443,7 @@ fn verify_evidence_archive(
     }
     let extracted_checksums_valid = match extracted {
         Some(directory) => {
+            verify_extracted_evidence_is_readable_without_privilege(directory)?;
             verify_bundle_checksums(directory)?;
             Some(true)
         }
@@ -454,6 +456,53 @@ fn verify_evidence_archive(
         extracts_to: lock.evidence_archive.extracts_to,
         extracted_checksums_valid,
     })
+}
+
+/// Prove restored evidence is usable by an unprivileged consumer.
+///
+/// A `tar` archive can record a directory without its search bit — normalising
+/// modes with `--mode='u=rw,go=r'` does exactly that. Extraction still reports
+/// success, and a process running as `root` can still read every file inside,
+/// because `root` bypasses the missing bit. Every unprivileged consumer,
+/// including hosted CI, instead gets `EACCES` on the first file it opens.
+///
+/// Verifying the checksums alone therefore cannot see the defect: it is a
+/// property of the recorded modes, not of the content. This checks the modes,
+/// so a developer running as `root` fails exactly where a consumer would.
+#[cfg(unix)]
+fn verify_extracted_evidence_is_readable_without_privilege(
+    directory: &Path,
+) -> Result<(), Box<dyn std::error::Error>> {
+    use std::os::unix::fs::PermissionsExt;
+
+    for entry in walkdir::WalkDir::new(directory) {
+        let entry = entry?;
+        let mode = entry.metadata()?.permissions().mode();
+        // A directory needs read and search; a file needs read.
+        let required = if entry.file_type().is_dir() {
+            0o500
+        } else {
+            0o400
+        };
+        if mode & required != required {
+            return Err(format!(
+                "restored evidence is unreadable without privilege: {} has mode {:04o}; \
+                 repack the archive with `--mode='u=rwX,go=rX'`",
+                entry.path().display(),
+                mode & 0o7777
+            )
+            .into());
+        }
+    }
+    Ok(())
+}
+
+/// Windows carries no POSIX mode bits, so there is nothing to prove there.
+#[cfg(not(unix))]
+fn verify_extracted_evidence_is_readable_without_privilege(
+    _directory: &Path,
+) -> Result<(), Box<dyn std::error::Error>> {
+    Ok(())
 }
 
 /// Prove the specification version agrees everywhere it is recorded.
@@ -1187,6 +1236,35 @@ mod tests {
         )
         .expect_err("cross-repository drift must fail");
         assert!(error.to_string().contains("corpus declares 0.0.1-other"));
+        fs::remove_dir_all(&directory).expect("remove isolated fixture directory");
+    }
+
+    /// Hosted CI runs unprivileged; a developer container often runs as `root`.
+    /// An evidence archive whose directory entry lost its search bit extracts
+    /// cleanly and checksums cleanly as `root`, and fails for everybody else.
+    /// The mode check is what makes the two agree.
+    #[cfg(unix)]
+    #[test]
+    fn restored_evidence_that_a_consumer_could_not_read_is_refused() {
+        use std::os::unix::fs::PermissionsExt;
+
+        let directory =
+            std::env::temp_dir().join(format!("occurframe-evidence-modes-{}", std::process::id()));
+        let bundle = directory.join("rc2");
+        fs::create_dir_all(&bundle).expect("fixture directory");
+        fs::write(bundle.join("SHA256SUMS"), b"").expect("fixture checksums");
+
+        // Searchable and readable: exactly what a consumer needs.
+        assert!(verify_extracted_evidence_is_readable_without_privilege(&bundle).is_ok());
+
+        // The defect: `tar --mode='u=rw,go=r'` records the directory as 0644.
+        fs::set_permissions(&bundle, fs::Permissions::from_mode(0o644))
+            .expect("reproduce the unsearchable directory");
+        let error = verify_extracted_evidence_is_readable_without_privilege(&bundle)
+            .expect_err("an unsearchable directory must be refused");
+        assert!(error.to_string().contains("unreadable without privilege"));
+
+        fs::set_permissions(&bundle, fs::Permissions::from_mode(0o755)).expect("restore");
         fs::remove_dir_all(&directory).expect("remove isolated fixture directory");
     }
 }

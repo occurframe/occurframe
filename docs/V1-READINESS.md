@@ -3,12 +3,15 @@
 **Question this document answers:** *is the implementation technically ready for
 an owner-reviewed public prerelease after CI?*
 
-**Answer: yes, with one hosted-CI condition.** Every locally executable gate
-passes at `0.1.0-rc2`, the last doctrine contradiction is formally resolved, and
-the release artifact assembles deterministically from digest-verified inputs.
-What remains before an owner review is the four-platform hosted CI run, which
-requires a push this environment cannot perform. Nothing found in this audit
-blocks the *oracle* itself.
+**Answer: not yet — one hosted-CI condition remains open.** Every locally
+executable gate passes at `0.1.0-rc2`, the last doctrine contradiction is
+formally resolved, and the release artifact assembles deterministically from
+digest-verified inputs. Hosted CI has run against RC2 and found one genuine
+defect, in the durable evidence archive rather than in the oracle; that defect is
+fixed and its recurrence is now gated. What remains is a hosted run in which the
+whole four-platform matrix concludes green at one commit, which requires a push
+this environment cannot perform. Nothing found in this audit blocks the *oracle*
+itself.
 
 Note the scope: this is readiness for an **owner-reviewed public prerelease**, not
 for stable `1.0.0`. Stable v1 additionally needs the corpus to leave release-
@@ -23,19 +26,41 @@ fix now), or **POST_V1**.
 
 ## BLOCKING
 
-### B-1 · Hosted CI has not run against `0.1.0-rc2`
+### B-1 · The hosted four-platform matrix has not concluded green at RC2
 
 The four-platform release-candidate workflow — platform builds, path-leak audit,
 binary-reproducibility measurement, two-pass deterministic assembly, and the
 clean-room consumer suite on Windows x86_64, Linux x86_64, macOS arm64 and macOS
-x86_64 — is authored and unchanged in shape from the run that passed at
-`0ad0d4c`. It has not been executed against the RC2 commits, because this
-environment has no push authorisation for `occurframe/occurframe`.
+x86_64 — has now been executed against RC2, and has not yet concluded green.
 
-**Evidence:** all gates pass locally on Linux; the same workflow concluded
-success on all four platforms at the previous commit (run `33334942151`).
-**Resolution:** owner pushes `dev`; the workflow runs on push and by
-`workflow_dispatch`. Until observed, four-platform status for RC2 is *unverified*,
+**What hosted CI has established so far.**
+
+| Run | Commit | Result |
+| --- | --- | --- |
+| `33342029682` | `83f1a1a` | All four platform jobs failed comparing multi-line alias output in PowerShell. Fixed in `9955aea`. |
+| `33342714486` | `9955aea` | All four platform jobs **passed**; assembly failed restoring the locked certification evidence. |
+| `33342025361` (corpus) | `5790faa` | Corpus authority CI **passed**. |
+
+**The assembly failure was a real defect, and it was in the durable evidence
+archive itself.** `certification/rc2-evidence.tar.gz` had been packed with
+`--mode='u=rw,go=r'`, which clears the search bit on the archived directory as
+well as on the files. `tar` extracts such an archive successfully and reports
+success; a process running as `root` then reads every file inside it, because
+`root` bypasses the missing bit. An unprivileged consumer — the hosted runner,
+and any ordinary user unpacking the published evidence — gets `EACCES` on the
+first file it opens. Every local reproduction ran as `root`, which is precisely
+why the defect survived to hosted CI.
+
+**Resolution.** The archive is repacked with `--mode='u=rwX,go=rX'` (directories
+`0755`, files `0644`), its content byte-identical and its per-file checksums
+unchanged; its digest is re-pinned in `release/evidence-lock.json`. So that the
+class of defect cannot recur silently, `xtask verify-evidence-archive
+--extracted` now checks the restored modes as well as the checksums, so a
+developer running as `root` fails exactly where a consumer would.
+
+**Still outstanding:** a hosted run in which all four platform jobs, the
+deterministic assembly and all four clean-room jobs conclude green at the same
+commit. Until that is observed, four-platform status for RC2 is *unverified*,
 not *passing*.
 
 This is the only item standing between the current tree and an owner review.
@@ -163,8 +188,9 @@ Locally executed at the RC2 commits, all passing: `cargo fmt --check`; `cargo
 clippy --workspace --all-targets -D warnings`; `cargo test --workspace`; `cargo
 doc --workspace --no-deps` with warnings denied; corpus validation and
 deterministic pack (184 vectors, canonical digest unchanged); durable
-certified-evidence archive verification, including per-file checksums after
-extraction; two-pass deterministic release assembly with identical file
+certified-evidence archive verification, including per-file checksums and
+unprivileged readability after extraction; two-pass deterministic release
+assembly with identical file
 manifests, `SHA256SUMS` and archives; absolute-path audit clean; dependency and
 licence inventory regenerated and compared; the clean-room consumer suite against
 the packaged release on Linux.
