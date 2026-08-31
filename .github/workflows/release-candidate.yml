@@ -8,8 +8,33 @@ on:
   workflow_dispatch:
   push:
     branches: [dev]
+    # Every path here is an input the packaged bundle is actually built from, so
+    # a change to any of them changes the release bytes and must re-run this
+    # gate. Watching only the workflow file, as this filter once did, meant a
+    # change to the release inputs themselves — the durable evidence archive and
+    # the packaging code, twice now — reached `dev` without the gate that exists
+    # to check it, and the run had to be dispatched by hand.
+    #
+    # `docs/`, `release-notes/`, the two licence texts and the adapter registry
+    # are listed because they are copied into the bundle and checksummed in its
+    # `SHA256SUMS`; editing them really does produce a different release. Paths
+    # that do not reach the bundle stay out, so ordinary repository maintenance
+    # does not spend four platform runners.
     paths:
       - .github/workflows/release-candidate.yml
+      - Cargo.toml
+      - Cargo.lock
+      - crates/**
+      - xtask/**
+      - release/**
+      - certification/**
+      - runners/registry/**
+      - docs/**
+      - release-notes/**
+      - examples/minimal-runner/**
+      - tests/clean-room/**
+      - LICENSE-APACHE
+      - LICENSE-MIT
 
 permissions:
   contents: read
