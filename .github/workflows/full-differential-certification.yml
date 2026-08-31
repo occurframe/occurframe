@@ -3,8 +3,8 @@ name: Full Differential Certification
 on:
   workflow_dispatch:
 
-# Preparation only: this workflow is intentionally manual until the owner starts
-# the subsequent clean recertification task.
+# Manual authority workflow. It never publishes a release or rewrites the
+# durable measurement; it proves a requested tooling commit against that lock.
 
 concurrency:
   group: rc3-full-differential-${{ github.ref }}
@@ -47,6 +47,69 @@ jobs:
           -CorpusPath ./corpus
           -Script certification/docker/tasks/full-certification.sh
 
+      - name: Restore locked RC2 and RC3 evidence
+        shell: bash
+        run: |
+          cargo run --locked -p xtask -- verify-evidence-archive \
+            --root . --lock release/evidence-lock-rc2.json
+          cargo run --locked -p xtask -- verify-evidence-archive \
+            --root . --lock release/evidence-lock.json
+          mkdir -p dist/certification/locked
+          tar -xzf certification/rc2-evidence.tar.gz -C dist/certification/locked
+          tar -xzf certification/rc3-evidence.tar.gz -C dist/certification/locked
+          cargo run --locked -p xtask -- verify-evidence-archive \
+            --root . --lock release/evidence-lock-rc2.json \
+            --extracted dist/certification/locked/rc2
+          cargo run --locked -p xtask -- verify-evidence-archive \
+            --root . --lock release/evidence-lock.json \
+            --extracted dist/certification/locked/rc3
+
+      - name: Reconcile RC2 to this RC3 execution
+        shell: bash
+        run: |
+          for current in rc3 rc3-rerun; do
+            cargo run --locked -p xtask -- reconcile-certifications \
+              --previous dist/certification/locked/rc2 \
+              --current "dist/certification/${current}" \
+              --expected-correction CRON-DST-001 \
+              --expected-correction CRON-DST-020 \
+              --metadata-only-correction CRON-DST-015 \
+              --output "dist/certification/${current}/rc2-rc3-reconciliation.json"
+            cargo run --locked -p xtask -- checksums \
+              --root "dist/certification/${current}" \
+              --output "dist/certification/${current}/SHA256SUMS"
+            cargo run --locked -p xtask -- certification-verify \
+              --directory "dist/certification/${current}"
+          done
+          cmp dist/certification/rc3/rc2-rc3-reconciliation.json \
+              dist/certification/rc3-rerun/rc2-rc3-reconciliation.json
+
+      - name: Match the durable RC3 measurement
+        shell: bash
+        run: |
+          locked=dist/certification/locked/rc3
+          current=dist/certification/rc3
+          cmp "$locked/observations.ndjson" "$current/observations.ndjson"
+          cmp "$locked/conformance-results.ndjson" "$current/conformance-results.ndjson"
+          cmp "$locked/matrix.csv" "$current/matrix.csv"
+          cmp "$locked/reconciliation.json" "$current/reconciliation.json"
+          cmp "$locked/reconciliation.md" "$current/reconciliation.md"
+          jq 'del(.tooling_source_revision, .tooling_source_revision_method)' \
+            "$locked/matrix.json" > /tmp/locked-matrix.json
+          jq 'del(.tooling_source_revision, .tooling_source_revision_method)' \
+            "$current/matrix.json" > /tmp/current-matrix.json
+          cmp /tmp/locked-matrix.json /tmp/current-matrix.json
+          sed -E '/Tooling source revision:/ s/[0-9a-f]{40}/<tooling-source>/' \
+            "$locked/differential-report.md" > /tmp/locked-report.md
+          sed -E '/Tooling source revision:/ s/[0-9a-f]{40}/<tooling-source>/' \
+            "$current/differential-report.md" > /tmp/current-report.md
+          cmp /tmp/locked-report.md /tmp/current-report.md
+          jq 'del(.current_certification.tooling_source_revision, .current_certification.semantic_bundle_digest)' \
+            "$locked/rc2-rc3-reconciliation.json" > /tmp/locked-rc2-rc3.json
+          jq 'del(.current_certification.tooling_source_revision, .current_certification.semantic_bundle_digest)' \
+            "$current/rc2-rc3-reconciliation.json" > /tmp/current-rc2-rc3.json
+          cmp /tmp/locked-rc2-rc3.json /tmp/current-rc2-rc3.json
+
       - name: Publish concise certification summary
         shell: bash
         run: |
@@ -67,6 +130,7 @@ jobs:
             echo "- Timeouts: $(jq -r '.summary.outcome_counts.timeout // 0' "$matrix")"
             echo "- Runner failures: $(jq -r '.summary.outcome_counts.runner_failure // 0' "$matrix")"
             echo "- RC1 ambiguous-error inventory: $(jq -r '.legacy_ambiguous_error_inventory' "$reconciliation")"
+            echo "- RC2 → RC3 unresolved cells: $(jq -r '.unresolved' dist/certification/rc3/rc2-rc3-reconciliation.json)"
             echo "- Deterministic byte equality: $(jq -r '.byte_equal' "$determinism")"
             echo "- Semantic digest: \`$(jq -r '.first_digest' "$determinism")\`"
           } >> "$GITHUB_STEP_SUMMARY"

@@ -1,10 +1,11 @@
 # Current readiness and historical RC2 audit
 
-**Current answer: AWAITING RECERTIFICATION.** The corrected RC3 corpus,
+**Current answer: READY FOR OWNER MERGE REVIEW.** The corrected RC3 corpus,
 expectation-blind protocol 3.0, checkout-derived source provenance, and hermetic
-runner environment are not certified by the immutable RC2 evidence described
-below. No owner merge/release readiness claim applies until the subsequent clean
-certification and release-gate task succeeds.
+runner environment are covered by the durable RC3 evidence lock. The mandatory
+RC2→RC3 reconciliation has zero unresolved cells; current release assembly uses
+RC3 evidence while historical RC2 evidence remains immutable. This is readiness
+for owner review, not a merge, tag, release, or publication.
 
 The remainder of this document is the historical RC2 readiness record. At that
 time the answer was **READY FOR OWNER MERGE REVIEW** because every then-defined gate

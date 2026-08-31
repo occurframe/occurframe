@@ -10,7 +10,7 @@ source tree on the machine.
 Run it against a directory or a `.tar.gz`:
 
     python3 tests/clean-room/verify_release.py \\
-        --bundle dist/release/occurframe-0.1.0-rc2 \\
+        --bundle dist/release/occurframe-0.1.0-rc3 \\
         --target x86_64-unknown-linux-gnu
 
 Exit status is 0 when every check passes and 1 otherwise; every check reports
@@ -31,14 +31,14 @@ import tempfile
 import xml.etree.ElementTree as ElementTree
 from pathlib import Path
 
-CORPUS_VERSION = "1.0.0-rc2"
+CORPUS_VERSION = "1.0.0-rc3"
 CORPUS_CANONICAL_DIGEST = (
-    "4804772d20fb36c7329b2c5f2f28e264d9bc00b11e407e76d9836fc38cd80470"
+    "c0a9cf0587c02ce5022cbb94d060e14d5b9d6f99c3210e512965f35062c4dfe0"
 )
 CORPUS_VECTORS = 184
-TOOL_VERSION = "0.1.0-rc2"
+TOOL_VERSION = "0.1.0-rc3"
 SPECIFICATION_VERSION = "1.0.0-rc1"
-RUNNER_PROTOCOL_VERSION = "2.0"
+RUNNER_PROTOCOL_VERSION = "3.0"
 # ERRATA-001: v1 ships one semantic command. These three require a recurrence
 # evaluator the ORACLE ONLY verdict does not authorise, so they must behave as
 # any other unknown word rather than as recognized-but-unavailable commands.
@@ -222,11 +222,17 @@ def verify_manifest(root: Path, target: str) -> None:
     check("manifest records the corpus version", corpus.get("version") == CORPUS_VERSION)
     check("manifest records the corpus canonical digest", corpus.get("canonical_digest") == CORPUS_CANONICAL_DIGEST)
     check("manifest records the corpus vector count", corpus.get("vectors") == CORPUS_VECTORS)
-    check("manifest records the pinned corpus SHA", len(corpus.get("sha", "")) == 40)
+    check("manifest records the corpus source revision", len(corpus.get("source_revision", "")) == 40)
+    check("manifest records the corpus source method", corpus.get("source_revision_method") == "git_checkout")
 
     certification = manifest.get("certification", {})
-    for field in ("artifact_name", "profile_version", "tooling_source_sha", "certification_manifest_sha256", "semantic_bundle_digest", "matrix_sha256"):
+    for field in ("artifact_name", "profile_version", "tooling_source_revision", "tooling_source_revision_method", "certification_manifest_sha256", "semantic_bundle_digest", "matrix_sha256"):
         check(f"manifest records certification {field}", bool(certification.get(field)), field)
+    check(
+        "manifest distinguishes attested tooling source provenance",
+        certification.get("tooling_source_revision_method") == "attested_input",
+        str(certification.get("tooling_source_revision_method")),
+    )
     check(
         "manifest's certification manifest digest matches the packaged document",
         certification.get("certification_manifest_sha256")
@@ -450,7 +456,7 @@ def main() -> int:
                 and deferred.returncode == short_deferred.returncode,
             )
 
-        print("\n[6] external protocol-v2 runner")
+        print("\n[6] external protocol-v3 runner")
         example_directory = root / "examples" / "minimal-runner"
         example_registry = example_directory / "runner-builds.example.json"
         check("release ships an example runner registry", example_registry.is_file())
@@ -582,8 +588,18 @@ def main() -> int:
         )
 
         print("\n[11] the shipped example registry, used exactly as documented")
-        if shutil.which("python3") is None:
-            print("  skip python3 is not on PATH under that name on this platform")
+        shipped_python = shutil.which("python3")
+        try:
+            shipped_python_works = shipped_python is not None and subprocess.run(
+                [shipped_python, "--version"],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                check=False,
+            ).returncode == 0
+        except OSError:
+            shipped_python_works = False
+        if not shipped_python_works:
+            print("  skip python3 is not executable under that name on this platform")
         else:
             # Documented path: set one variable, run. No OCCURFRAME_RUNNER_ROOT,
             # so the bundled registry's own location must supply the base.

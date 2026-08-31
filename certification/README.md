@@ -18,8 +18,7 @@ An observation never amends an expectation. A report never re-decides a verdict.
 ## What the profile pins
 
 `profile.json` is the immutable RC2 configuration. `profile-rc3.json` is the
-successor input prepared for recertification and has status
-`awaiting_recertification`. It declares an expected corpus revision for
+certified successor input with status `certified`. It declares an expected corpus revision for
 comparison, but the run derives the actual clean checkout revision and records
 it independently from the canonical digest. A mismatch fails closed. If Git
 metadata is unavailable, only an explicit trusted `attested_input` is accepted;
@@ -113,8 +112,8 @@ pwsh -File .\certification\docker\certify.ps1 -Action run `
   -Script certification/docker/tasks/full-certification.sh
 ```
 
-This command is preparation for the next clean certification task; do not treat
-its mere availability as new evidence or release readiness. The driver first
+The durable RC3 evidence was produced with this command and is separately
+digest-locked; the command's mere availability is not evidence. The driver first
 requires clean Git worktrees. It bind-mounts the tooling repository read-only at
 `/src`, the corpus
 read-only at `/src-corpus`, and a writable output directory at `/out`. The
@@ -138,11 +137,10 @@ values.
 
 ## Artifacts
 
-Historical RC2 bundles remain immutable. A successor run lands in
-`dist/certification/rc3/` and is **not** committed.
-They are CI artifacts and future release artifacts. What is version-controlled
-is this profile, the image definition, the report and reconciliation
-implementations, schemas, small golden fixtures, and documentation.
+Historical RC2 bundles remain immutable. A fresh run lands in
+`dist/certification/rc3/`. The normalized durable copy is committed as
+`certification/rc3-evidence.tar.gz` and pinned by `release/evidence-lock.json`;
+the historical lock is preserved as `release/evidence-lock-rc2.json`.
 
 Committing a regenerated observation set to make the repository "contain the
 latest run" would turn evidence into source, which is the one thing this

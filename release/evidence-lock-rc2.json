@@ -1,0 +1,51 @@
+{
+  "certification": {
+    "artifact_name": "occurframe-rc2-certification-eeeb7fb822888cdba2e0e09a9c692bed8ca024b0",
+    "configured_builds": 25,
+    "matrix_sha256": "2c89d83101deacd12b43a6ffd434869a53f35ba1344b7932b7c38bccb17544f1",
+    "normative_violation_vectors": 76,
+    "observations": 4232,
+    "profile_version": "rc2.1",
+    "reproducible_builds": 23,
+    "semantic_bundle_digest": "1f592fdce4f9641406afb76383ff10585b5764dcfd097e595912c9a01cce98e1",
+    "semantic_divergence_vectors": 163,
+    "tooling_source_sha": "eeeb7fb822888cdba2e0e09a9c692bed8ca024b0",
+    "unreproducible_builds": 2,
+    "vectors": 184
+  },
+  "corpus": {
+    "canonical_digest": "4804772d20fb36c7329b2c5f2f28e264d9bc00b11e407e76d9836fc38cd80470",
+    "release_digest": "8254f0dcb5e2dc0c719acbb2ec02185972f318d0bfc619ac73065b257b426477",
+    "sha": "f5026940fcc667b1892e99f3abe95b424931bed0",
+    "vectors": 184,
+    "version": "1.0.0-rc2"
+  },
+  "evidence_archive": {
+    "extracts_to": "rc2",
+    "path": "certification/rc2-evidence.tar.gz",
+    "sha256": "98d9282ca54f6249bc70be7bce42f5cd637399f64f7d0c276235e9317764e18a"
+  },
+  "platform_binaries": [
+    "occurframe-aarch64-apple-darwin",
+    "occurframe-x86_64-apple-darwin",
+    "occurframe-x86_64-pc-windows-msvc.exe",
+    "occurframe-x86_64-unknown-linux-gnu",
+    "oframe-aarch64-apple-darwin",
+    "oframe-x86_64-apple-darwin",
+    "oframe-x86_64-pc-windows-msvc.exe",
+    "oframe-x86_64-unknown-linux-gnu"
+  ],
+  "provenance_blocked_builds": [
+    "ruby.fugit",
+    "ruby.ice_cube"
+  ],
+  "schema_version": "1.0.0",
+  "specification": {
+    "errata_resolving_command_doctrine": "ERRATA-001",
+    "shipped_v1_commands": [
+      "test"
+    ],
+    "version": "1.0.0-rc1"
+  },
+  "tool_version": "0.1.0-rc2"
+}

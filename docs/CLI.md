@@ -2,7 +2,7 @@
 
 ## `test`
 
-Occurframe `0.1.0-rc2` implements one public operation:
+Occurframe `0.1.0-rc3` implements one public operation:
 
 ```text
 occurframe test --engine <configured-build-id>

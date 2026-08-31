@@ -52,9 +52,9 @@ certification workflow restores pinned historical builds and runs only the
 representative migration suite; its smoke artifact is not the full evidence
 set. The separate Full Differential Certification workflow runs the complete
 184-vector population twice in the canonical environment and uploads the
-candidate RC2 evidence bundle. Neither workflow changes corpus authority.
+current RC3 evidence bundle. Neither workflow changes corpus authority.
 
-Full RC2 certification is a separate, long-running developer workflow. Build
+Full RC3 certification is a separate, long-running developer workflow. Build
 the canonical image once, then execute with networking disabled:
 
 ```text
@@ -73,22 +73,25 @@ runtime version is part of runner identity and is enforced during `hello`.
 Dependency restoration happens during image construction; the actual
 certification container runs with `--network none`.
 
-The certified RC2 evidence lives in the repository at
-`certification/rc2-evidence.tar.gz`, with its digest pinned in the evidence lock,
+The current certified RC3 evidence lives in the repository at
+`certification/rc3-evidence.tar.gz`, with its digest pinned in the current evidence lock,
 so release assembly never depends on an expiring CI artifact:
 
 ```text
 cargo run -p xtask -- verify-evidence-archive --root . --lock release/evidence-lock.json
-mkdir -p dist/certification && tar -xzf certification/rc2-evidence.tar.gz -C dist/certification
-cargo run -p xtask -- verify-evidence-archive --root . --lock release/evidence-lock.json --extracted dist/certification/rc2
+mkdir -p dist/certification && tar -xzf certification/rc3-evidence.tar.gz -C dist/certification
+cargo run -p xtask -- verify-evidence-archive --root . --lock release/evidence-lock.json --extracted dist/certification/rc3
 ```
 
-The archive is rebuilt — if it ever has to be — with modes normalised the way
-`X` normalises them, so directories keep their search bit:
+The archive is rebuilt — if it ever has to be — from a Linux staging tree with
+directories normalized to `0755` and files to `0644` before deterministic tar
+and `gzip -n` construction. This avoids preserving host-specific executable bits.
 
 ```text
+find rc3 -type d -exec chmod 755 {} +
+find rc3 -type f -exec chmod 644 {} +
 tar --sort=name --mtime='@0' --owner=0 --group=0 --numeric-owner \
-    --mode='u=rwX,go=rX' -cf - rc2 | gzip -9n > certification/rc2-evidence.tar.gz
+    -cf - rc3 | gzip -9n > certification/rc3-evidence.tar.gz
 ```
 
 `--mode='u=rw,go=r'` looks equivalent and is not: it clears the search bit on
@@ -101,7 +104,7 @@ fails where a consumer would.
 Release-candidate packaging is deterministic and refuses evidence, corpus, or binaries that differ from `release/evidence-lock.json`:
 
 ```text
-cargo run -p xtask -- release-package --root . --corpus ../corpus --certification dist/certification/rc2 --binaries dist/platform-binaries --lock release/evidence-lock.json --output dist/release/occurframe-0.1.0-rc2
+cargo run -p xtask -- release-package --root . --corpus ../corpus --certification dist/certification/rc3 --binaries dist/platform-binaries --lock release/evidence-lock.json --output dist/release/occurframe-0.1.0-rc3
 ```
 
 The output path must not already exist. Full platform assembly is performed by the manual release-candidate CI workflow; it uploads artifacts but never publishes GitHub Releases or crates.
@@ -111,14 +114,14 @@ the machine's `CARGO_HOME`. Cargo's `trim-paths` profile option is not stable on
 the pinned toolchain, so the remap goes through `RUSTFLAGS`:
 
 ```text
-RUSTFLAGS="--remap-path-prefix=$CARGO_HOME=/cargo --remap-path-prefix=$PWD=/occurframe" cargo build --locked --release -p occurframe-cli --bins
+RUSTFLAGS="--remap-path-prefix=$CARGO_HOME=/cargo --remap-path-prefix=$RUSTUP_HOME=/rustup --remap-path-prefix=$PWD=/occurframe" cargo build --locked --release -p occurframe-cli --bins
 ```
 
 Packaging refuses to write `SHA256SUMS` until an audit proves the bundle carries
 no absolute developer or CI path, and the same audit is available directly:
 
 ```text
-cargo run -p xtask -- audit-paths --root dist/release/occurframe-0.1.0-rc2
+cargo run -p xtask -- audit-paths --root dist/release/occurframe-0.1.0-rc3
 cargo run -p xtask -- audit-paths --root dist/platform-binaries --forbid /srv/build
 ```
 
@@ -133,7 +136,7 @@ The digest of a transport archive cannot live inside the archive it describes, s
 it is recorded beside the release:
 
 ```text
-cargo run -p xtask -- release-attest --bundle dist/release/occurframe-0.1.0-rc2 --archive dist/release/occurframe-0.1.0-rc2.tar.gz --output dist/release/release-attestation.json
+cargo run -p xtask -- release-attest --bundle dist/release/occurframe-0.1.0-rc3 --archive dist/release/occurframe-0.1.0-rc3.tar.gz --output dist/release/release-attestation.json
 ```
 
 Two consumer-facing suites complement the Rust tests. The fast one runs in
@@ -143,7 +146,7 @@ machine:
 
 ```text
 cargo run --locked -p xtask -- source-example-smoke --corpus ../corpus
-python3 tests/clean-room/verify_release.py --bundle dist/release/occurframe-0.1.0-rc2.tar.gz --target x86_64-unknown-linux-gnu
+python3 tests/clean-room/verify_release.py --bundle dist/release/occurframe-0.1.0-rc3.tar.gz --target x86_64-unknown-linux-gnu
 ```
 
 `source-example-smoke` validates and deterministically packs the authored

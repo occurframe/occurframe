@@ -64,11 +64,11 @@ expectation-blind question projection; expected answers remain authority-only.
 
 ## The differential evidence
 
-The immutable RC2 release evidence records a differential run of 25 configured historical
+The durable RC3 evidence records a differential run of 25 configured historical
 engine builds, 23 of them reproducible, executed over all 184 vectors for 4,232
-observations. It does not certify corrected RC3 semantics or protocol 3.0. The
-current repository is **AWAITING RECERTIFICATION** and does not republish those
-historical figures as current RC3 evidence.
+observations under protocol 3.0 and `hermetic_allowlist_v1`. The immutable RC2
+archive remains available under its named historical lock; it is not rewritten
+or presented as certification of the corrected corpus.
 
 **A divergence is not automatically a defect.** The corpus distinguishes
 normative answers from named policy differences, named dialect differences,
@@ -81,7 +81,7 @@ reading a matrix without over-claiming.
 
 ## What this prerelease is not
 
-`0.1.0-rc3` is prerelease tooling awaiting certification. It is not Occurframe
+`0.1.0-rc3` is certified prerelease tooling. It is not Occurframe
 v1.0, and corpus `1.0.0-rc3` is not stable `1.0.0`.
 
 **Occurframe v1 ships one semantic command: `test`.** That is the whole surface,

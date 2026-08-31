@@ -124,10 +124,11 @@ The native occurrence sequence is never sorted to manufacture stability.
 Volatile environment/container wrapper metadata is retained in
 `environment.json` but excluded from the semantic comparison.
 
-The successor bundle will be generated under `dist/certification/rc3/` with a
-manifest and `SHA256SUMS`. The dedicated Full Differential Certification
-workflow is manual preparation for the subsequent recertification task; this
-milestone does not run or publish it.
+The certified bundle is generated under `dist/certification/rc3/` with a
+manifest and `SHA256SUMS`. Its normalized durable archive is pinned by the
+current evidence lock. The dedicated Full Differential Certification workflow
+reruns it twice and verifies semantic equality to the durable measurement while
+keeping invocation-specific source identity truthful.
 
 The manifest records the actual clean corpus and tooling source revisions
 independently from the canonical vector digest. Git checkout identity is

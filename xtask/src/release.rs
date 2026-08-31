@@ -76,7 +76,8 @@ pub fn split_binary_name(file_name: &str) -> Result<(String, String), Box<dyn st
 pub struct CorpusIdentity {
     pub version: String,
     pub repository: String,
-    pub sha: String,
+    pub source_revision: String,
+    pub source_revision_method: String,
     pub canonical_digest: String,
     pub release_digest: String,
     pub vectors: usize,
@@ -87,7 +88,8 @@ pub struct CorpusIdentity {
 pub struct CertificationIdentity {
     pub artifact_name: String,
     pub profile_version: String,
-    pub tooling_source_sha: String,
+    pub tooling_source_revision: String,
+    pub tooling_source_revision_method: String,
     /// Digest of the certification manifest document itself.
     pub certification_manifest_sha256: String,
     /// Digest of the certified semantic evidence bundle.

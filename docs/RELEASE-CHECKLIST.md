@@ -1,10 +1,8 @@
 # Release checklist (owner-controlled)
 
-> **Historical RC2 checklist — not current release authority.** The corrected
-> RC3 corpus, expectation-blind protocol 3.0, observed source provenance, and
-> hermetic execution boundary are awaiting a new full certification and
-> successor evidence lock. Do not execute the RC2 commands below for the current
-> product.
+> **RC3 owner checklist.** Automation stops after certification, packaging and
+> clean-room verification. It does not merge, tag, publish a release or publish
+> crates.
 
 Publication is owner-controlled. Nothing in this repository publishes anything:
 CI builds, verifies and uploads artifacts, and stops. This checklist is the
@@ -27,14 +25,14 @@ prerelease, and crates.io publication is not required at all.
       `SHA256SUMS`, and the recorded binary-reproducibility result has been read
       and accepted (it is a measurement, not an assumption).
 - [ ] `release/evidence-lock.json` still matches the certified evidence.
-- [ ] `release-notes/0.1.0-rc2.md` has been read end to end and is accurate.
+- [ ] `release-notes/0.1.0-rc3.md` has been read end to end and is accurate.
 
 ## 1. Review `dev` → `main` for the tooling repository
 
 ```sh
 gh pr create --repo occurframe/occurframe --base main --head dev --draft \
-  --title "Release candidate review: Occurframe 0.1.0-rc2" \
-  --body-file release-notes/0.1.0-rc2.md
+  --title "Release candidate review: Occurframe 0.1.0-rc3" \
+  --body-file release-notes/0.1.0-rc3.md
 ```
 
 - [ ] The PR is marked **draft** and titled as a release-candidate review.
@@ -46,14 +44,14 @@ gh pr create --repo occurframe/occurframe --base main --head dev --draft \
 
 ```sh
 gh pr create --repo occurframe/corpus --base main --head dev --draft \
-  --title "Corpus 1.0.0-rc2 publication review" \
-  --body-file release-notes/1.0.0-rc2.md
+  --title "Corpus 1.0.0-rc3 publication review" \
+  --body-file ../corpus/release-notes/1.0.0-rc3.md
 ```
 
 - [ ] Confirm the diff contains **no** change to any vector, expectation, schema
       semantics, registry semantics or canonical digest.
 - [ ] Confirm the canonical corpus digest is still
-      `4804772d20fb36c7329b2c5f2f28e264d9bc00b11e407e76d9836fc38cd80470` over 184
+      `c0a9cf0587c02ce5022cbb94d060e14d5b9d6f99c3210e512965f35062c4dfe0` over 184
       vectors. Any change here stops the release and is investigated before
       anything else happens.
 
@@ -77,8 +75,8 @@ published tooling release must not reference an unpublished corpus state.
 ```sh
 git -C <corpus checkout> fetch origin
 git -C <corpus checkout> checkout main && git -C <corpus checkout> pull --ff-only
-git -C <corpus checkout> tag -a corpus-1.0.0-rc2 -m "Occurframe corpus 1.0.0-rc2 (prerelease)"
-git -C <corpus checkout> push origin corpus-1.0.0-rc2
+git -C <corpus checkout> tag -a corpus-1.0.0-rc3 -m "Occurframe corpus 1.0.0-rc3 (prerelease)"
+git -C <corpus checkout> push origin corpus-1.0.0-rc3
 ```
 
 - [ ] The tag is a prerelease identity. Do **not** create a `1.0.0` tag.
@@ -88,8 +86,8 @@ git -C <corpus checkout> push origin corpus-1.0.0-rc2
 ```sh
 git -C <tooling checkout> fetch origin
 git -C <tooling checkout> checkout main && git -C <tooling checkout> pull --ff-only
-git -C <tooling checkout> tag -a v0.1.0-rc2 -m "Occurframe 0.1.0-rc2 (prerelease)"
-git -C <tooling checkout> push origin v0.1.0-rc2
+git -C <tooling checkout> tag -a v0.1.0-rc3 -m "Occurframe 0.1.0-rc3 (prerelease)"
+git -C <tooling checkout> push origin v0.1.0-rc3
 ```
 
 - [ ] The tag SHA equals the `tooling_commit_sha` in the artifact's
@@ -99,10 +97,10 @@ git -C <tooling checkout> push origin v0.1.0-rc2
 ## 7. Create the GitHub prerelease
 
 ```sh
-gh release create v0.1.0-rc2 \
+gh release create v0.1.0-rc3 \
   --repo occurframe/occurframe \
-  --title "Occurframe 0.1.0-rc2" \
-  --notes-file release-notes/0.1.0-rc2.md \
+  --title "Occurframe 0.1.0-rc3" \
+  --notes-file release-notes/0.1.0-rc3.md \
   --prerelease \
   --draft
 ```
@@ -116,15 +114,15 @@ Download the artifact from the release-candidate run, verify it locally *before*
 uploading, and upload only what you verified.
 
 ```sh
-gh run download <run-id> --repo occurframe/occurframe --name occurframe-0.1.0-rc2 --dir ./staging
+gh run download <run-id> --repo occurframe/occurframe --name occurframe-0.1.0-rc3 --dir ./staging
 cd ./staging
 
-sha256sum -c occurframe-0.1.0-rc2.tar.gz.sha256
-tar -xzf occurframe-0.1.0-rc2.tar.gz
-( cd occurframe-0.1.0-rc2 && sha256sum -c SHA256SUMS )
+sha256sum -c occurframe-0.1.0-rc3.tar.gz.sha256
+tar -xzf occurframe-0.1.0-rc3.tar.gz
+( cd occurframe-0.1.0-rc3 && sha256sum -c SHA256SUMS )
 
 python3 <tooling checkout>/tests/clean-room/verify_release.py \
-  --bundle occurframe-0.1.0-rc2 --target x86_64-unknown-linux-gnu
+  --bundle occurframe-0.1.0-rc3 --target x86_64-unknown-linux-gnu
 ```
 
 - [ ] Archive checksum verifies.
@@ -134,9 +132,9 @@ python3 <tooling checkout>/tests/clean-room/verify_release.py \
       certification digests.
 
 ```sh
-gh release upload v0.1.0-rc2 --repo occurframe/occurframe \
-  occurframe-0.1.0-rc2.tar.gz \
-  occurframe-0.1.0-rc2.tar.gz.sha256 \
+gh release upload v0.1.0-rc3 --repo occurframe/occurframe \
+  occurframe-0.1.0-rc3.tar.gz \
+  occurframe-0.1.0-rc3.tar.gz.sha256 \
   release-attestation.json
 ```
 
@@ -147,10 +145,10 @@ gh release upload v0.1.0-rc2 --repo occurframe/occurframe \
 From a clean directory, as an outside consumer would:
 
 ```sh
-gh release download v0.1.0-rc2 --repo occurframe/occurframe --dir ./published
+gh release download v0.1.0-rc3 --repo occurframe/occurframe --dir ./published
 cd ./published
-sha256sum -c occurframe-0.1.0-rc2.tar.gz.sha256
-sha256sum occurframe-0.1.0-rc2.tar.gz
+sha256sum -c occurframe-0.1.0-rc3.tar.gz.sha256
+sha256sum occurframe-0.1.0-rc3.tar.gz
 ```
 
 - [ ] The published archive digest equals `archive_sha256` in

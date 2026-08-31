@@ -16,10 +16,10 @@ file inside the archive is covered by its own `SHA256SUMS`.
 
 ```sh
 # The digest published beside the archive.
-sha256sum -c occurframe-0.1.0-rc2.tar.gz.sha256
+sha256sum -c occurframe-0.1.0-rc3.tar.gz.sha256
 
-tar -xzf occurframe-0.1.0-rc2.tar.gz
-cd occurframe-0.1.0-rc2
+tar -xzf occurframe-0.1.0-rc3.tar.gz
+cd occurframe-0.1.0-rc3
 
 # Every packaged file, at the digest the release recorded for it.
 sha256sum -c SHA256SUMS
@@ -28,8 +28,8 @@ sha256sum -c SHA256SUMS
 On macOS use `shasum -a 256 -c`. On Windows PowerShell:
 
 ```powershell
-Get-FileHash occurframe-0.1.0-rc2.tar.gz -Algorithm SHA256
-tar -xzf occurframe-0.1.0-rc2.tar.gz
+Get-FileHash occurframe-0.1.0-rc3.tar.gz -Algorithm SHA256
+tar -xzf occurframe-0.1.0-rc3.tar.gz
 ```
 
 `release-manifest.json` records what this artifact is: tooling version, the exact
@@ -72,11 +72,11 @@ cat VERSION
 ```
 
 ```text
-Occurframe tooling: 0.1.0-rc2
+Occurframe tooling: 0.1.0-rc3
 Specification:      1.0.0-rc1
 Corpus:             1.0.0-rc3
-Runner protocol:    2.0
-Certification:      rc2.1
+Runner protocol:    3.0
+Certification:      rc3.1
 Commit:             <exact released commit>
 ```
 

@@ -7,16 +7,16 @@ name: Release Candidate Packaging
 on:
   workflow_dispatch:
 
-# The immutable RC2 evidence lock cannot certify RC3. Keep assembly manually
-# gated until the subsequent recertification task installs a successor lock.
+# Manual packaging gate. It consumes the durable RC3 evidence lock and publishes
+# only a workflow artifact: no tag, GitHub Release, crate, or branch mutation.
 
 permissions:
   contents: read
   actions: read
 
 env:
-  CORPUS_REF: f5026940fcc667b1892e99f3abe95b424931bed0
-  RELEASE_NAME: occurframe-0.1.0-rc2
+  CORPUS_REF: cd6569c9f57c9eb8f087f1a18c08f23baa747bde
+  RELEASE_NAME: occurframe-0.1.0-rc3
 
 jobs:
   platform-binaries:
@@ -51,11 +51,12 @@ jobs:
         shell: pwsh
         run: |
           $cargoHome = if ($env:CARGO_HOME) { $env:CARGO_HOME } else { Join-Path $HOME '.cargo' }
+          $rustupHome = if ($env:RUSTUP_HOME) { $env:RUSTUP_HOME } else { Join-Path $HOME '.rustup' }
           $checkout = (Get-Location).Path
-          foreach ($path in @($cargoHome, $checkout)) {
+          foreach ($path in @($cargoHome, $rustupHome, $checkout)) {
             if ($path -match '\s') { throw "cannot remap a path containing whitespace: $path" }
           }
-          "RUSTFLAGS=--remap-path-prefix=$cargoHome=/cargo --remap-path-prefix=$checkout=/occurframe" |
+          "RUSTFLAGS=--remap-path-prefix=$cargoHome=/cargo --remap-path-prefix=$rustupHome=/rustup --remap-path-prefix=$checkout=/occurframe" |
             Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
 
       - name: Build both shared-implementation aliases
@@ -125,7 +126,7 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
-      - name: Check out immutable RC2 authority
+      - name: Check out corrected RC3 authority
         uses: actions/checkout@v4
         with:
           repository: occurframe/corpus
@@ -140,21 +141,21 @@ jobs:
           path: dist/platform-binaries
           merge-multiple: true
 
-      # The certified RC2 evidence is republished, never re-measured here, and it
+      # The certified RC3 evidence is republished, never re-measured here, and it
       # is restored from the repository rather than from a hosted CI artifact.
       # Hosted artifacts expire; once one does, a release can no longer be
       # reassembled from its own inputs. The archive's digest is pinned in the
       # immutable evidence lock, and every file inside is then re-verified
       # against the certification bundle's own SHA256SUMS.
-      - name: Restore locked RC2 certification evidence
+      - name: Restore locked RC3 certification evidence
         run: |
           cargo run --locked -p xtask -- verify-evidence-archive \
             --root . --lock release/evidence-lock.json
           mkdir -p dist/certification
-          tar -xzf certification/rc2-evidence.tar.gz -C dist/certification
+          tar -xzf certification/rc3-evidence.tar.gz -C dist/certification
           cargo run --locked -p xtask -- verify-evidence-archive \
-            --root . --lock release/evidence-lock.json --extracted dist/certification/rc2
-          cargo run --locked -p xtask -- certification-verify --directory dist/certification/rc2
+            --root . --lock release/evidence-lock.json --extracted dist/certification/rc3
+          cargo run --locked -p xtask -- certification-verify --directory dist/certification/rc3
 
       - name: Restore executable bits for Unix binaries
         run: chmod +x dist/platform-binaries/occurframe-*apple-darwin dist/platform-binaries/oframe-*apple-darwin dist/platform-binaries/occurframe-*linux-gnu dist/platform-binaries/oframe-*linux-gnu
@@ -164,11 +165,11 @@ jobs:
       - name: Assemble release candidate twice
         run: |
           cargo run --locked -p xtask -- release-package \
-            --root . --corpus corpus-authority --certification dist/certification/rc2 \
+            --root . --corpus corpus-authority --certification dist/certification/rc3 \
             --binaries dist/platform-binaries --lock release/evidence-lock.json \
             --commit "${{ github.sha }}" --output "dist/release/${RELEASE_NAME}"
           cargo run --locked -p xtask -- release-package \
-            --root . --corpus corpus-authority --certification dist/certification/rc2 \
+            --root . --corpus corpus-authority --certification dist/certification/rc3 \
             --binaries dist/platform-binaries --lock release/evidence-lock.json \
             --commit "${{ github.sha }}" --output dist/release/reproducibility-check
 
@@ -225,8 +226,8 @@ jobs:
       - name: Publish job summary
         run: |
           {
-            echo "## Occurframe 0.1.0-rc2"
-            echo "- Corpus: 1.0.0-rc2 / 4804772d20fb36c7329b2c5f2f28e264d9bc00b11e407e76d9836fc38cd80470"
+            echo "## Occurframe 0.1.0-rc3"
+            echo "- Corpus: 1.0.0-rc3 / c0a9cf0587c02ce5022cbb94d060e14d5b9d6f99c3210e512965f35062c4dfe0"
             echo "- Platform aliases: 8 binaries across 4 targets"
             echo "- Two-pass assembly: identical file manifests, SHA256SUMS and archives"
             echo "- Publication: artifact only; no GitHub Release, tag, crates.io package or main merge"
@@ -239,7 +240,7 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: occurframe-0.1.0-rc2
+          name: occurframe-0.1.0-rc3
           path: |
             dist/release/
           if-no-files-found: error
@@ -275,7 +276,7 @@ jobs:
       - name: Download the release candidate
         uses: actions/download-artifact@v4
         with:
-          name: occurframe-0.1.0-rc2
+          name: occurframe-0.1.0-rc3
           path: downloaded
 
       # Verified from the transport archive, exactly as a consumer receives it.

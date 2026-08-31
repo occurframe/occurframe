@@ -11,8 +11,8 @@ Corpus:             1.0.0-rc3
 Runner protocol:    3.0
 ```
 
-The successor certification input profile is `rc3.1`; its status is
-`awaiting_recertification`. The immutable historical evidence remains `rc2.1`.
+The current certification profile is `rc3.1`; its status is `certified`.
+The immutable historical evidence and named lock remain `rc2.1`.
 
 The **behavioural specification** versions separately from everything else
 because it is the semantics an implementation is measured against, not the
@@ -75,21 +75,24 @@ recording the bundle checksum digest and the archive's SHA-256.
 
 ## Locked evidence
 
-The certified RC2 differential evidence remains immutable and is not treated as
-certification of RC3. It was republished by the RC2 release, never
-re-measured at release time. It is stored **in this repository** as
-`certification/rc2-evidence.tar.gz` (a deterministic, `gzip -n` archive of the
-certified bundle), not fetched from a hosted CI artifact. Hosted artifacts
-expire; once one does, a release can no longer be reassembled from its own
-inputs, and the evidence behind a published claim becomes unreachable.
+The current certified RC3 evidence is stored **in this repository** as
+`certification/rc3-evidence.tar.gz`, a deterministic `gzip -n` archive of the
+normalized evidence tree. It is republished by release assembly, never
+re-measured there. Hosted artifacts expire; the durable archive keeps the
+evidence behind the release reproducible from its own inputs.
+
+The certified RC2 archive remains immutable at
+`certification/rc2-evidence.tar.gz`, and its byte-identical historical lock is
+preserved as `release/evidence-lock-rc2.json`. Advancing the current lock did not
+rewrite RC2 identity or evidence.
 
 The archive's SHA-256 is pinned in `release/evidence-lock.json` under
 `evidence_archive`, so restoring it is digest-verified in three steps:
 
 ```text
 cargo run -p xtask -- verify-evidence-archive --root . --lock release/evidence-lock.json
-tar -xzf certification/rc2-evidence.tar.gz -C dist/certification
-cargo run -p xtask -- verify-evidence-archive --root . --lock release/evidence-lock.json --extracted dist/certification/rc2
+tar -xzf certification/rc3-evidence.tar.gz -C dist/certification
+cargo run -p xtask -- verify-evidence-archive --root . --lock release/evidence-lock.json --extracted dist/certification/rc3
 ```
 
 The first call refuses a modified archive before anything is unpacked; the third

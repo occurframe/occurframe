@@ -19,10 +19,11 @@ use occurframe_runner::{
     CaseExecution, ProtocolSchema, ReproducibilityStatus, RunnerBuild, RunnerRegistry, run_batch,
     semantic_observation_digest, semantic_observation_ndjson,
 };
-use occurframe_wire::{EngineOutcome, ExecutionStatus, Vector};
+use occurframe_wire::{EngineOutcome, ExecutionStatus, SourceRevisionMethod, Vector};
 
 mod audit;
 mod deps;
+mod recertification;
 mod release;
 
 fn main() -> ExitCode {
@@ -213,6 +214,30 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
             verify_bundle_checksums(&options.required("directory")?)?;
             print_json(&serde_json::json!({"checksums_valid": true}))?;
         }
+        "reconcile-certifications" => {
+            let report = recertification::reconcile_certifications(
+                &options.required("previous")?,
+                &options.required("current")?,
+                &options.all_strings("expected-correction"),
+                &options.all_strings("metadata-only-correction"),
+            )?;
+            fs::write(options.required("output")?, canonical_pretty_json(&report)?)?;
+            print_json(&serde_json::json!({
+                "previous_cells": report.previous_cells,
+                "current_cells": report.current_cells,
+                "comparable_cells": report.comparable_cells,
+                "changed_cells": report.changed_cells,
+                "category_counts": report.category_counts,
+                "unresolved": report.unresolved,
+            }))?;
+            if report.unresolved != 0 {
+                return Err(format!(
+                    "certification reconciliation contained {} unresolved cell(s)",
+                    report.unresolved
+                )
+                .into());
+            }
+        }
         "release-package" => {
             let report = package_release_candidate(&ReleaseInputs {
                 repository_root: options.required("root")?,
@@ -336,6 +361,8 @@ struct ReleaseEvidenceArchiveLock {
 struct ReleaseCorpusLock {
     version: String,
     sha: String,
+    #[serde(default)]
+    source_revision_method: Option<String>,
     vectors: usize,
     canonical_digest: String,
     release_digest: String,
@@ -346,6 +373,8 @@ struct ReleaseCorpusLock {
 struct ReleaseCertificationLock {
     artifact_name: String,
     tooling_source_sha: String,
+    #[serde(default)]
+    tooling_source_revision_method: Option<String>,
     profile_version: String,
     semantic_bundle_digest: String,
     matrix_sha256: String,
@@ -656,7 +685,7 @@ fn package_release_candidate(
         .into());
     }
     let lock: ReleaseEvidenceLock = serde_json::from_slice(&fs::read(lock_path)?)?;
-    if lock.schema_version != "1.0.0" || lock.tool_version != env!("CARGO_PKG_VERSION") {
+    if lock.schema_version != "2.0.0" || lock.tool_version != env!("CARGO_PKG_VERSION") {
         return Err("release evidence lock does not match the tooling prerelease".into());
     }
     validate_specification_identity(&lock.specification, corpus_root)?;
@@ -818,7 +847,7 @@ fn package_release_candidate(
     )?;
 
     let release_manifest = release::ReleaseManifest {
-        schema_version: "2.0.0".into(),
+        schema_version: "3.0.0".into(),
         artifact_kind: "occurframe_release_candidate".into(),
         tool_version: lock.tool_version.clone(),
         specification_version: lock.specification.version.clone(),
@@ -832,7 +861,12 @@ fn package_release_candidate(
         corpus: release::CorpusIdentity {
             version: corpus_report.corpus_version.clone(),
             repository: "https://github.com/occurframe/corpus".into(),
-            sha: lock.corpus.sha.clone(),
+            source_revision: lock.corpus.sha.clone(),
+            source_revision_method: lock
+                .corpus
+                .source_revision_method
+                .clone()
+                .ok_or("release lock is missing corpus source revision method")?,
             canonical_digest: corpus_report.canonical_corpus_digest.clone(),
             release_digest: corpus_report.release_digest.clone(),
             vectors: corpus_report.vector_count,
@@ -841,7 +875,12 @@ fn package_release_candidate(
         certification: release::CertificationIdentity {
             artifact_name: lock.certification.artifact_name.clone(),
             profile_version: lock.certification.profile_version.clone(),
-            tooling_source_sha: lock.certification.tooling_source_sha.clone(),
+            tooling_source_revision: lock.certification.tooling_source_sha.clone(),
+            tooling_source_revision_method: lock
+                .certification
+                .tooling_source_revision_method
+                .clone()
+                .ok_or("release lock is missing tooling source revision method")?,
             certification_manifest_sha256: sha256_hex(&fs::read(
                 certification_root.join("certification-manifest.json"),
             )?),
@@ -925,9 +964,13 @@ fn validate_release_evidence(
 ) -> Result<(), Box<dyn std::error::Error>> {
     let certification = &lock.certification;
     let manifest_matches = manifest.tooling_source_revision == certification.tooling_source_sha
+        && source_revision_method_name(manifest.tooling_source_revision_method)
+            == certification.tooling_source_revision_method.as_deref()
         && manifest.certification_profile_version == certification.profile_version
         && manifest.semantic_bundle_digest == certification.semantic_bundle_digest
         && manifest.corpus_source_revision == lock.corpus.sha
+        && source_revision_method_name(manifest.corpus_source_revision_method)
+            == lock.corpus.source_revision_method.as_deref()
         && manifest.corpus_version == lock.corpus.version
         && manifest.configured_builds == certification.configured_builds
         && manifest.reproducible_builds == certification.reproducible_builds
@@ -943,6 +986,13 @@ fn validate_release_evidence(
         return Err("certification evidence differs from the immutable release lock".into());
     }
     Ok(())
+}
+
+fn source_revision_method_name(method: Option<SourceRevisionMethod>) -> Option<&'static str> {
+    method.map(|method| match method {
+        SourceRevisionMethod::GitCheckout => "git_checkout",
+        SourceRevisionMethod::AttestedInput => "attested_input",
+    })
 }
 
 fn write_runner_diagnostics(

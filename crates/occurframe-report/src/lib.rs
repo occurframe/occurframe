@@ -757,7 +757,7 @@ mod tests {
             .expect("workspace root");
         let successor = load_profile(&root.join("certification/profile-rc3.json")).unwrap();
         assert_eq!(successor.schema_version, "2.0.0");
-        assert_eq!(successor.status, "awaiting_recertification");
+        assert_eq!(successor.status, "certified");
         assert_eq!(successor.runner_protocol_version, "3.0");
         assert_eq!(
             successor.corpus.canonical_digest.as_deref(),

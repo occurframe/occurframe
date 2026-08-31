@@ -1,29 +1,31 @@
 {
   "certification": {
-    "artifact_name": "occurframe-rc2-certification-eeeb7fb822888cdba2e0e09a9c692bed8ca024b0",
+    "artifact_name": "occurframe-rc3-certification-a8ec520b9fe75a7c5ac4df46a3aec32266c907b5",
     "configured_builds": 25,
-    "matrix_sha256": "2c89d83101deacd12b43a6ffd434869a53f35ba1344b7932b7c38bccb17544f1",
+    "matrix_sha256": "c7462422711d0ef62116ffe8d421b64c7bbd25325d165da201318e379884c9f3",
     "normative_violation_vectors": 76,
     "observations": 4232,
-    "profile_version": "rc2.1",
+    "profile_version": "rc3.1",
     "reproducible_builds": 23,
-    "semantic_bundle_digest": "1f592fdce4f9641406afb76383ff10585b5764dcfd097e595912c9a01cce98e1",
+    "semantic_bundle_digest": "48eeaecab74be9659dfd908cd6aadb4013ccc4e5bbbeb8940b54a0f561f70454",
     "semantic_divergence_vectors": 163,
-    "tooling_source_sha": "eeeb7fb822888cdba2e0e09a9c692bed8ca024b0",
+    "tooling_source_sha": "a8ec520b9fe75a7c5ac4df46a3aec32266c907b5",
+    "tooling_source_revision_method": "attested_input",
     "unreproducible_builds": 2,
     "vectors": 184
   },
   "corpus": {
-    "canonical_digest": "4804772d20fb36c7329b2c5f2f28e264d9bc00b11e407e76d9836fc38cd80470",
-    "release_digest": "8254f0dcb5e2dc0c719acbb2ec02185972f318d0bfc619ac73065b257b426477",
-    "sha": "f5026940fcc667b1892e99f3abe95b424931bed0",
+    "canonical_digest": "c0a9cf0587c02ce5022cbb94d060e14d5b9d6f99c3210e512965f35062c4dfe0",
+    "release_digest": "3fb4e9fca0bbbed078568cbc92cae78e2d240149cf4c9e13cab3a447f180e448",
+    "sha": "cd6569c9f57c9eb8f087f1a18c08f23baa747bde",
+    "source_revision_method": "git_checkout",
     "vectors": 184,
-    "version": "1.0.0-rc2"
+    "version": "1.0.0-rc3"
   },
   "evidence_archive": {
-    "extracts_to": "rc2",
-    "path": "certification/rc2-evidence.tar.gz",
-    "sha256": "98d9282ca54f6249bc70be7bce42f5cd637399f64f7d0c276235e9317764e18a"
+    "extracts_to": "rc3",
+    "path": "certification/rc3-evidence.tar.gz",
+    "sha256": "365197bd8c7c29c0d052cc79358c8d87def528fd3fd9fcd448fa784e845c032c"
   },
   "platform_binaries": [
     "occurframe-aarch64-apple-darwin",
@@ -39,7 +41,7 @@
     "ruby.fugit",
     "ruby.ice_cube"
   ],
-  "schema_version": "1.0.0",
+  "schema_version": "2.0.0",
   "specification": {
     "errata_resolving_command_doctrine": "ERRATA-001",
     "shipped_v1_commands": [
@@ -47,5 +49,5 @@
     ],
     "version": "1.0.0-rc1"
   },
-  "tool_version": "0.1.0-rc2"
+  "tool_version": "0.1.0-rc3"
 }

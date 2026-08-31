@@ -2,10 +2,10 @@
   "schema_version": "2.0.0",
   "certification_profile_version": "rc3.1",
   "certification_id": "occurframe-rc3-authority-boundary-certification",
-  "status": "awaiting_recertification",
+  "status": "certified",
   "release_posture": {
     "publishes_stable_release": false,
-    "note": "This profile prepares certification of corrected RC3 semantics, expectation-blind protocol 3.0, observed source provenance, and hermetic runner execution. This task does not generate or publish that evidence."
+    "note": "This profile produced the durable RC3 evidence for corrected semantics, expectation-blind protocol 3.0, observed source provenance, and hermetic runner execution. It does not publish a release."
   },
   "corpus": {
     "repository": "https://github.com/occurframe/corpus",
@@ -210,6 +210,6 @@
       "generated reports",
       "SHA256SUMS"
     ],
-    "distribution": "subsequent clean certification task"
+    "distribution": "certification/rc3-evidence.tar.gz, digest-pinned by release/evidence-lock.json"
   }
 }
